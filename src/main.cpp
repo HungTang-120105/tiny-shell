@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <cstring>
 
-#include "parser.h"
+#include "../include/parser.h"
 
 int main(){
     char input[256];

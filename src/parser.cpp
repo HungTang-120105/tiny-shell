@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "parser.h"
+#include "../include/parser.h"
 
 void parse_and_execute(const char *input){
     char command[256];

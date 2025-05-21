@@ -1,0 +1,34 @@
+# Thư mục build (thường chứa file biên dịch)
+build/
+
+# File CMake cache
+CMakeCache.txt
+CMakeFiles/
+
+# File makefile do CMake tạo ra
+Makefile
+cmake_install.cmake
+
+# Các file nhị phân, object files
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+
+# File log, temp
+*.log
+*.tmp
+
+# Thư mục Visual Studio (nếu có)
+.vs/
+
+# Thư mục IDE khác (nếu dùng)
+.idea/
+*.vscode/
+
+# Các file backup, tạm của editor
+*~
+*.swp
+*.bak

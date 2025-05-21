@@ -1,6 +1,6 @@
 #include<stdio.h>
 #include <unistd.h> // chdir
-#include "builtins.h"
+#include "../include/builtins.h"
 
 int pwd(char **args){
     char cwd[1024];

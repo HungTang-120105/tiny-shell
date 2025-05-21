@@ -1,6 +1,6 @@
 #include<stdio.h>
 #include<string.h>
-#include "builtins.h"
+#include "../include/builtins.h"
 
 // có hàm mới thì thêm vào đây
 //extern int cd(char **args);
