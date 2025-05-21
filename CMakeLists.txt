@@ -4,6 +4,7 @@ project(tiny_shell C CXX)
 
 include_directories(include)
 
-file(GLOB SOURCES "src/*.c" "src/*.cpp")
+file(GLOB HEADERS "src/include/*.h")
+file(GLOB SOURCES "src/process/*.c" "src/process/*.cpp" "src/main.cpp")
 
 add_executable(myShell ${SOURCES})
