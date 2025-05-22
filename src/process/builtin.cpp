@@ -11,7 +11,7 @@ bool is_builtin(const std::string& cmd) {
     return cmd == "cd" || cmd == "exit" || cmd == "pwd" || cmd == "echo" ||
            cmd == "help" || cmd == "list" || cmd == "kill" || cmd == "stop" ||
            cmd == "resume" || cmd == "date" || cmd == "dir" ||
-           cmd == "path" || cmd == "addpath";
+           cmd == "path" || cmd == "addpath" || cmd == "mlist" || cmd == "pinfo";
 }
 
 void run_builtin(const std::vector<std::string>& args) {
@@ -30,6 +30,8 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "dir") builtin_dir(args);
     else if (cmd == "path") builtin_path(args);
     else if (cmd == "addpath") builtin_addpath(args);
+    else if (cmd == "mlist") builtin_mlist(args);
+    else if (cmd == "pinfo") builtin_pinfo(args);
 }
 
 void builtin_cd(const std::vector<std::string>& args) {
@@ -146,4 +148,19 @@ void builtin_addpath(const std::vector<std::string>& args) {
     std::string p = std::getenv("PATH");
     p += ";" + args[1];
     _putenv_s("PATH", p.c_str());
+}
+
+
+//process_manager.h
+void builtin_mlist(const std::vector<std::string>& args) {
+    print_managed_processes();
+}
+
+void builtin_pinfo(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cout << "Usage: pinfo <pid>\n";
+        return;
+    }
+    DWORD pid = std::stoul(args[1]);
+    print_process_info(pid);
 }

@@ -3,7 +3,8 @@
 #include <tlhelp32.h>
 #include <iostream>
 #include <vector>
-#include <mutex>
+
+static std::vector<ProcessInfo> process_list;
 
 void list_processes() {
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -27,9 +28,21 @@ void list_processes() {
     CloseHandle(hSnapshot);
 }
 
+int find_process_index(DWORD pid) {
+    for (size_t i = 0; i < process_list.size(); ++i) {
+        if (process_list[i].pid == pid) return static_cast<int>(i);
+    }
+    return -1;
+}
+
 bool stop_process(DWORD pid) {
+    if (pid == GetCurrentProcessId()) {
+        std::cerr << "Cannot suspend the shell itself!\n";
+        return false;
+    }
+
     HANDLE hProcess = OpenProcess(PROCESS_SUSPEND_RESUME, FALSE, pid);
-    if (hProcess == NULL) {
+    if (!hProcess) {
         std::cerr << "Failed to open process.\n";
         return false;
     }
@@ -42,12 +55,18 @@ bool stop_process(DWORD pid) {
 
     suspend(hProcess);
     CloseHandle(hProcess);
+
+    int index = find_process_index(pid);
+    if (index != -1) {
+        process_list[index].status = "Suspended";
+    }
+
     return true;
 }
 
 bool resume_process(DWORD pid) {
     HANDLE hProcess = OpenProcess(PROCESS_SUSPEND_RESUME, FALSE, pid);
-    if (hProcess == NULL) {
+    if (!hProcess) {
         std::cerr << "Failed to open process.\n";
         return false;
     }
@@ -60,31 +79,60 @@ bool resume_process(DWORD pid) {
 
     resume(hProcess);
     CloseHandle(hProcess);
+
+    int index = find_process_index(pid);
+    if (index != -1) {
+        process_list[index].status = "Running";
+    }
+
     return true;
 }
 
 bool kill_process(DWORD pid) {
     HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
-    if (hProcess == NULL) {
+    if (!hProcess) {
         std::cerr << "Failed to open process.\n";
         return false;
     }
 
     BOOL result = TerminateProcess(hProcess, 0);
     CloseHandle(hProcess);
+
+    if (result) {
+        int index = find_process_index(pid);
+        if (index != -1) {
+            process_list.erase(process_list.begin() + index);
+        }
+    }
+
     return result;
 }
 
-
-static std::vector<ProcessInfo> process_list;
-static std::mutex list_mutex;
-void addProcess(DWORD pid, const std::wstring &cmdline, HANDLE hProcess) {
-    std::lock_guard<std::mutex> lock(list_mutex);
-
-    // Chuyển cmdline từ wstring -> string để lưu trong ProcessInfo
+void addProcess(DWORD pid, const std::wstring &cmdline, HANDLE hProcess, bool is_background) {
     int len = WideCharToMultiByte(CP_UTF8, 0, cmdline.c_str(), -1, NULL, 0, NULL, NULL);
     std::string name(len, 0);
     WideCharToMultiByte(CP_UTF8, 0, cmdline.c_str(), -1, &name[0], len, NULL, NULL);
+    process_list.push_back({ pid, name, "Running", is_background });
+}
 
-    process_list.push_back({ pid, name, "Running" });
+void print_managed_processes() {
+    std::cout << "PID\tStatus\t\tType\t\tName\n";
+    for (const auto& p : process_list) {
+        std::cout << p.pid << "\t" << p.status << "\t"
+                  << (p.is_background ? "Background" : "Foreground") << "\t"
+                  << p.name << "\n";
+    }
+}
+
+void print_process_info(DWORD pid) {
+    int index = find_process_index(pid);
+    if (index == -1) {
+        std::cout << "Process with PID " << pid << " not found in managed list.\n";
+        return;
+    }
+    const auto& p = process_list[index];
+    std::cout << "PID:        " << p.pid << "\n"
+              << "Status:     " << p.status << "\n"
+              << "Type:       " << (p.is_background ? "Background" : "Foreground") << "\n"
+              << "Name:       " << p.name << "\n";
 }

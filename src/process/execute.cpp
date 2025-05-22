@@ -77,6 +77,7 @@ void executeCommand(const Command &cmd) {
         si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
     }
 
+    
     std::wstring cmdline = joinArgs(cmd.argv);
     BOOL ok = CreateProcessW(NULL, cmdline.data(), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
 
@@ -92,10 +93,11 @@ void executeCommand(const Command &cmd) {
     if (cmd.background) {
         std::wcout << L"[bg] PID=" << pi.dwProcessId << L"\n";
         // Lưu progress vào manager nếu cần
-        addProcess(pi.dwProcessId, cmdline, pi.hProcess);
+        addProcess(pi.dwProcessId, cmdline, pi.hProcess, cmd.background);
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
     } else {
+        addProcess(pi.dwProcessId, cmdline, pi.hProcess, cmd.background);
         WaitForSingleObject(pi.hProcess, INFINITE);
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);

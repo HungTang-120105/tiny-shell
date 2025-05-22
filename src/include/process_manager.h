@@ -7,7 +7,8 @@
 struct ProcessInfo {
     DWORD pid;
     std::string name;
-    std::string status;  // "Running", "Stopped", v.v.
+    std::string status;
+    bool is_background; 
 };
 
 // Liệt kê danh sách tiến trình
@@ -23,4 +24,10 @@ bool resume_process(DWORD pid);
 bool kill_process(DWORD pid);
 
 // Thêm một tiến trình vào danh sách
-void addProcess(DWORD pid, const std::wstring &cmdline, HANDLE hProcess);
+void addProcess(DWORD pid, const std::wstring &cmdline, HANDLE hProcess, bool is_background);
+
+// in ra danh sách các tiến trình đang quản lý (Myshell)
+void print_managed_processes();
+
+// in ra thông tin của một tiến trình theo PID
+void print_process_info(DWORD pid);
