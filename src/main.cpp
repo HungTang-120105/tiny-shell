@@ -1,23 +1,42 @@
-#include <stdio.h>
-#include <cstring>
+#include <iostream>
+#include <string>
 
 #include "include/parser.h"
+#include "include/execute.h"
 
-int main(){
-    char input[256];
+// Forward declaration (sẽ code sau)
+void executeCommand(const Command& cmd);
 
-    while (1){
-        printf("my_shell> ");
-        if (fgets(input, sizeof(input), stdin) == NULL){
-            printf("nhap lenh");
+void printPrompt() {
+    std::cout << "myShell> ";
+}
+
+int main() {
+    std::string line;
+
+    while (true) {
+        printPrompt();
+
+        // Đọc dòng lệnh từ người dùng
+        if (!std::getline(std::cin, line)) {
+            std::cout << "\n";
+            break; // EOF (Ctrl+D / Ctrl+Z)
         }
 
-        if (strncmp(input, "exit", 4) == 0){
+        // Bỏ qua dòng trống
+        if (line.empty()) continue;
+
+        // Phân tích dòng lệnh
+        Command cmd = parseCommand(line);
+
+        // Xử lý lệnh đặc biệt (exit)
+        if (!cmd.argv.empty() && cmd.argv[0] == "exit") {
             break;
         }
 
-        parse_and_execute(input);
+        // Gọi hàm thực thi
+        executeCommand(cmd);
     }
+
     return 0;
 }
-
