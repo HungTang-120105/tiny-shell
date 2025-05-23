@@ -10,10 +10,55 @@
 #include <mutex>
 #include <thread>  // Thêm thư viện này
 #include <chrono>
+#include <psapi.h>
+
 #pragma comment(lib, "wbemuuid.lib")
+#pragma comment(lib, "psapi.lib")
+
 
 bool monitor_running = true;
 static std::vector<ProcessInfo> process_list;
+
+// Hàm kiểm tra process có đang chạy không
+bool is_process_running(DWORD pid) {
+    if (pid == 0) return false;
+    
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if (hProcess == NULL) {
+        return false;
+    }
+    
+    DWORD exitCode;
+    bool isRunning = false;
+    if (GetExitCodeProcess(hProcess, &exitCode)) {
+        isRunning = (exitCode == STILL_ACTIVE);
+    }
+    
+    CloseHandle(hProcess);
+    return isRunning;
+}
+
+// Hàm đồng bộ process_list với hệ thống
+void sync_process_list() {
+    auto it = process_list.begin();
+    while (it != process_list.end()) {
+        if (!is_process_running(it->pid)) {
+            std::cout << "[AUTO REMOVED] PID: " << it->pid 
+                      << " | Name: " << it->name << "\n";
+            it = process_list.erase(it); // Xóa tiến trình và cập nhật iterator
+        } else {
+            ++it; // Tiến tới phần tử tiếp theo
+        }
+    }
+}
+
+// Thread đồng bộ chạy độc lập
+void sync_thread_function() {
+    while (monitor_running) {
+        std::this_thread::sleep_for(std::chrono::seconds(2)); // Kiểm tra mỗi 2 giây
+        sync_process_list();
+    }
+}
 
 void list_processes() {
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -67,7 +112,7 @@ bool stop_process(DWORD pid) {
 
     int index = find_process_index(pid);
     if (index != -1) {
-        process_list[index].status = "Suspended";
+        process_list[index].status = "Suspended";   
     }
 
     return true;
@@ -112,6 +157,7 @@ bool kill_process(DWORD pid) {
         if (index != -1) {
             process_list.erase(process_list.begin() + index);
         }
+        std::cout << "[TERMINATED PROCESS] PID: " << pid << " has been terminated from the system.\n";
     }
 
     return result;
@@ -178,57 +224,57 @@ public:
     }
 
     virtual HRESULT STDMETHODCALLTYPE Indicate(LONG lObjectCount, IWbemClassObject** apObjArray) {
-        for (LONG i = 0; i < lObjectCount; i++) {
-            VARIANT vtClass;
-            HRESULT hr = apObjArray[i]->Get(L"__CLASS", 0, &vtClass, NULL, NULL);
-            if (FAILED(hr) || vtClass.vt != VT_BSTR) continue;
+    for (LONG i = 0; i < lObjectCount; i++) {
+        VARIANT vtClass;
+        HRESULT hr = apObjArray[i]->Get(L"__CLASS", 0, &vtClass, NULL, NULL);
+        if (FAILED(hr) || vtClass.vt != VT_BSTR) continue;
 
-            std::wstring className = vtClass.bstrVal;
-            VariantClear(&vtClass);
+        std::wstring className = vtClass.bstrVal;
+        VariantClear(&vtClass);
 
-            VARIANT vtProp;
-            hr = apObjArray[i]->Get(L"TargetInstance", 0, &vtProp, NULL, NULL);
-            if (FAILED(hr) || vtProp.vt != VT_UNKNOWN) continue;
+        VARIANT vtProp;
+        hr = apObjArray[i]->Get(L"TargetInstance", 0, &vtProp, NULL, NULL);
+        if (FAILED(hr) || vtProp.vt != VT_UNKNOWN) continue;
 
-            IUnknown* pUnk = vtProp.punkVal;
-            IWbemClassObject* pObj = NULL;
-            pUnk->QueryInterface(IID_IWbemClassObject, (void**)&pObj);
+        IUnknown* pUnk = vtProp.punkVal;
+        IWbemClassObject* pObj = NULL;
+        pUnk->QueryInterface(IID_IWbemClassObject, (void**)&pObj);
 
-            VARIANT vtName, vtPid;
-            pObj->Get(L"Name", 0, &vtName, NULL, NULL);
-            pObj->Get(L"ProcessId", 0, &vtPid, NULL, NULL);
+        VARIANT vtName, vtPid;
+        pObj->Get(L"Name", 0, &vtName, NULL, NULL);
+        pObj->Get(L"ProcessId", 0, &vtPid, NULL, NULL);
 
-            std::wstring name = vtName.bstrVal;
-            DWORD pid = vtPid.uintVal;
+        std::wstring name = vtName.bstrVal;
+        DWORD pid = vtPid.uintVal;
 
-            if (className == L"__InstanceCreationEvent") {
-                std::string utf8name;
-                int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
-                utf8name.resize(len);
-                WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, utf8name.data(), len, nullptr, nullptr);
+        if (className == L"__InstanceCreationEvent") {
+            // Chỉ in thông tin tiến trình, không thêm vào process_list
+            std::string utf8name;
+            int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
+            utf8name.resize(len);
+            WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, utf8name.data(), len, nullptr, nullptr);
 
-                {
-                    std::lock_guard<std::mutex> lock(mtx);
-                    addProcess(pid, name, NULL, false);
+            std::cout << "[NEW PROCESS] PID: " << pid << " | Name: " << utf8name << "\n";
+        } else if (className == L"__InstanceDeletionEvent") {
+            // Xóa tiến trình khỏi hệ thống nếu nó tồn tại
+            HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+            if (hProcess) {
+                if (TerminateProcess(hProcess, 0)) {
+                    std::cout << "[TERMINATED PROCESS] PID: " << pid << " has been terminated from the system.\n";
+                } else {
+                    std::cerr << "Failed to terminate process (or the process was terminated automatically) with PID: " << pid << ".\n";
                 }
-
-                std::cout << "[NEW PROCESS] PID: " << pid << " | Name: " << utf8name << "\n";
-            } else if (className == L"__InstanceDeletionEvent") {
-                std::lock_guard<std::mutex> lock(mtx);
-                int idx = find_process_index(pid);
-                if (idx != -1) {
-                    std::cout << "[TERMINATED PROCESS] PID: " << pid << " | Name: " << process_list[idx].name << "\n";
-                    process_list.erase(process_list.begin() + idx);
-                }
+                CloseHandle(hProcess);
             }
-
-            VariantClear(&vtName);
-            VariantClear(&vtPid);
-            pObj->Release();
-            VariantClear(&vtProp);
         }
-        return WBEM_S_NO_ERROR;
+
+        VariantClear(&vtName);
+        VariantClear(&vtPid);
+        pObj->Release();
+        VariantClear(&vtProp);
     }
+    return WBEM_S_NO_ERROR;
+}
 
 
     virtual HRESULT STDMETHODCALLTYPE SetStatus(LONG lFlags, HRESULT hResult, BSTR strParam, IWbemClassObject* pObjParam) {
@@ -365,6 +411,7 @@ void MonitorProcessCreation() {
     std::cout << "Monitoring process creation and deletion... Press Ctrl+C to stop.\n";
 
     // Chờ sự kiện
+    std::thread sync_thread(sync_thread_function);
     while (monitor_running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -377,4 +424,6 @@ void MonitorProcessCreation() {
     pSvc->Release();
     pLoc->Release();
     CoUninitialize();
+    sync_thread.join();
+
 }

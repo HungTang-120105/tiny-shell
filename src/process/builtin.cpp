@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <vector>
 #include <string>
+#include <thread>
 
 
 
@@ -173,8 +174,10 @@ void builtin_pinfo(const std::vector<std::string>& args) {
 
 
 void builtin_monitor(const std::vector<std::string>& args) {
+    monitor_running = true; // Đặt lại biến cờ
     std::cout << "[INFO] Starting process creation monitor...\n";
-    MonitorProcessCreation(); // Gọi hàm giám sát tiến trình
+    std::thread monitorThread(MonitorProcessCreation);
+    monitorThread.detach(); // Chạy trong luồng riêng, không chặn shell
 }
 
 void builtin_stopmonitor(const std::vector<std::string>& args) {
