@@ -1,6 +1,6 @@
 #include "../include/execute.h"
-#include "../include/builtin.h"    // hỗ trợ built-in commands
-#include "../include/process_manager.h"  // hỗ trợ kill/stop/resume
+#include "../include/builtin.h"          // hỗ trợ built-in commands
+#include "../include/process_manager.h" // hỗ trợ kill/stop/resume
 #include <windows.h>
 #include <iostream>
 #include <string>
@@ -28,61 +28,105 @@ void executeCommand(const Command &cmd) {
 
     // Xử lý built-in commands trước
     if (is_builtin(cmd.argv[0])) {
+        std::cout << "[DEBUG] run_builtin called, returning early\n";
         run_builtin(cmd.argv);
         return;
     }
 
+    // Chuẩn bị STARTUPINFO và PROCESS_INFORMATION
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
-    si.dwFlags = STARTF_USESTDHANDLES;
+    si.dwFlags = STARTF_USESTDHANDLES;    // cho phép override stdin/stdout/stderr
     ZeroMemory(&pi, sizeof(pi));
 
-    HANDLE hIn = INVALID_HANDLE_VALUE;
+    HANDLE hIn  = INVALID_HANDLE_VALUE;
     HANDLE hOut = INVALID_HANDLE_VALUE;
 
-    // Input redirection
+    // SECURITY_ATTRIBUTES để tạo handle có thể kế thừa
+    SECURITY_ATTRIBUTES sa;
+    ZeroMemory(&sa, sizeof(sa));
+    sa.nLength = sizeof(sa);
+    sa.lpSecurityDescriptor = NULL;
+    sa.bInheritHandle = TRUE; // cho phép con thừa kế handle này
+
+    // --- Input redirection ---
     if (!cmd.infile.empty()) {
         std::wstring winIn;
         int len = MultiByteToWideChar(CP_UTF8, 0, cmd.infile.c_str(), -1, NULL, 0);
         winIn.resize(len);
         MultiByteToWideChar(CP_UTF8, 0, cmd.infile.c_str(), -1, &winIn[0], len);
-        hIn = CreateFileW(winIn.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+        hIn = CreateFileW(
+            winIn.c_str(),
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            &sa,               // truyền sa để handle có thể kế thừa
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
         if (hIn == INVALID_HANDLE_VALUE) {
             std::wcerr << L"Error opening input file: " << winIn << L"\n";
             return;
         }
+
+        // Đảm bảo flag kế thừa
+        SetHandleInformation(hIn, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
         si.hStdInput = hIn;
     } else {
         si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
     }
 
-    // Output redirection
+    // --- Output redirection ---
     if (!cmd.outfile.empty()) {
         std::wstring winOut;
         int len = MultiByteToWideChar(CP_UTF8, 0, cmd.outfile.c_str(), -1, NULL, 0);
         winOut.resize(len);
         MultiByteToWideChar(CP_UTF8, 0, cmd.outfile.c_str(), -1, &winOut[0], len);
-        hOut = CreateFileW(winOut.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+        hOut = CreateFileW(
+            winOut.c_str(),
+            GENERIC_WRITE,
+            0,
+            &sa,               // truyền sa để handle có thể kế thừa
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
         if (hOut == INVALID_HANDLE_VALUE) {
             std::wcerr << L"Error opening output file: " << winOut << L"\n";
             if (hIn != INVALID_HANDLE_VALUE) CloseHandle(hIn);
             return;
         }
+
+        // Đảm bảo flag kế thừa
+        SetHandleInformation(hOut, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
         si.hStdOutput = hOut;
-        si.hStdError = hOut;
+        si.hStdError  = hOut;
     } else {
         si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-        si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+        si.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
     }
 
-    
+    // Chuẩn bị command line và khởi tạo tiến trình
     std::wstring cmdline = joinArgs(cmd.argv);
-    BOOL ok = CreateProcessW(NULL, cmdline.data(), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+    BOOL ok = CreateProcessW(
+        NULL,
+        cmdline.data(),   // lưu ý: data() cho phép sửa đổi, phù hợp với CreateProcessW
+        NULL,             // process security attributes
+        NULL,             // thread security attributes
+        TRUE,             // thừa kế handles
+        0,                // creation flags
+        NULL,             // environment
+        NULL,             // current directory
+        &si,
+        &pi
+    );
 
-    // Đóng handle redirect
-    if (hIn != INVALID_HANDLE_VALUE) CloseHandle(hIn);
+    // Đóng các handle redirect ở bên parent
+    if (hIn  != INVALID_HANDLE_VALUE) CloseHandle(hIn);
     if (hOut != INVALID_HANDLE_VALUE) CloseHandle(hOut);
 
     if (!ok) {
@@ -90,9 +134,9 @@ void executeCommand(const Command &cmd) {
         return;
     }
 
+    // Quản lý tiến trình (background/foreground)
     if (cmd.background) {
         std::wcout << L"[bg] PID=" << pi.dwProcessId << L"\n";
-        // Lưu progress vào manager nếu cần
         addProcess(pi.dwProcessId, cmdline, pi.hProcess, cmd.background);
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
