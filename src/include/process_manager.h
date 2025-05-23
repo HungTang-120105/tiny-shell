@@ -3,6 +3,7 @@
 #include <vector>
 #include <windows.h>
 
+extern bool monitor_running;
 // Struct để lưu thông tin process
 struct ProcessInfo {
     DWORD pid;
@@ -31,3 +32,5 @@ void print_managed_processes();
 
 // in ra thông tin của một tiến trình theo PID
 void print_process_info(DWORD pid);
+
+void MonitorProcessCreation();

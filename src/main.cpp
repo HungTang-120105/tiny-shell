@@ -4,6 +4,8 @@
 
 #include "include/parser.h"
 #include "include/execute.h"
+#include <thread> // để dùng std::thread
+#include "include/process_manager.h"
 
 // Forward declare control handler
 static HANDLE g_currentProcess = NULL;
@@ -35,6 +37,10 @@ int main() {
     
     // Install Ctrl-C/Break handler
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+    // Chạy monitor trong background
+    std::thread monitorThread(MonitorProcessCreation);
+    monitorThread.detach(); // không chặn main thread
+
 
     std::string line;
 

@@ -8,3 +8,5 @@ file(GLOB HEADERS "src/include/*.h")
 file(GLOB SOURCES "src/process/*.c" "src/process/*.cpp" "src/main.cpp")
 
 add_executable(myShell ${SOURCES})
+
+target_link_libraries(myShell wbemuuid ole32 oleaut32)

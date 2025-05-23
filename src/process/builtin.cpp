@@ -7,11 +7,14 @@
 #include <vector>
 #include <string>
 
+
+
 bool is_builtin(const std::string& cmd) {
     return cmd == "cd" || cmd == "exit" || cmd == "pwd" || cmd == "echo" ||
            cmd == "help" || cmd == "list" || cmd == "kill" || cmd == "stop" ||
            cmd == "resume" || cmd == "date" || cmd == "dir" ||
-           cmd == "path" || cmd == "addpath" || cmd == "mlist" || cmd == "pinfo";
+           cmd == "path" || cmd == "addpath" || cmd == "mlist" || cmd == "pinfo" || 
+           cmd == "monitor" || cmd == "stopmonitor";
 }
 
 void run_builtin(const std::vector<std::string>& args) {
@@ -32,6 +35,9 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "addpath") builtin_addpath(args);
     else if (cmd == "mlist") builtin_mlist(args);
     else if (cmd == "pinfo") builtin_pinfo(args);
+    else if (cmd == "monitor") builtin_monitor(args);
+    else if (cmd == "stopmonitor") builtin_stopmonitor(args);
+
 }
 
 void builtin_cd(const std::vector<std::string>& args) {
@@ -163,4 +169,15 @@ void builtin_pinfo(const std::vector<std::string>& args) {
     }
     DWORD pid = std::stoul(args[1]);
     print_process_info(pid);
+}
+
+
+void builtin_monitor(const std::vector<std::string>& args) {
+    std::cout << "[INFO] Starting process creation monitor...\n";
+    MonitorProcessCreation(); // Gọi hàm giám sát tiến trình
+}
+
+void builtin_stopmonitor(const std::vector<std::string>& args) {
+    monitor_running = false;
+    std::cout << "Stopping process monitor...\n";
 }

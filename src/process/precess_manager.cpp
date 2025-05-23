@@ -4,6 +4,15 @@
 #include <iostream>
 #include <vector>
 
+#include <initguid.h>  // Đảm bảo GUID được định nghĩa
+#include <wbemidl.h>
+#include <comdef.h>
+#include <mutex>
+#include <thread>  // Thêm thư viện này
+#include <chrono>
+#pragma comment(lib, "wbemuuid.lib")
+
+bool monitor_running = true;
 static std::vector<ProcessInfo> process_list;
 
 void list_processes() {
@@ -135,4 +144,237 @@ void print_process_info(DWORD pid) {
               << "Status:     " << p.status << "\n"
               << "Type:       " << (p.is_background ? "Background" : "Foreground") << "\n"
               << "Name:       " << p.name << "\n";
+}
+
+
+
+
+class EventSink : public IWbemObjectSink {
+    LONG m_lRef;
+    std::mutex mtx;
+
+public:
+    EventSink() : m_lRef(0) {}
+    virtual ~EventSink() {}
+
+    virtual ULONG STDMETHODCALLTYPE AddRef() {
+        return InterlockedIncrement(&m_lRef);
+    }
+
+    virtual ULONG STDMETHODCALLTYPE Release() {
+        LONG lRef = InterlockedDecrement(&m_lRef);
+        if (lRef == 0) delete this;
+        return lRef;
+    }
+
+    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppv) {
+        if (riid == IID_IUnknown || riid == IID_IWbemObjectSink) {
+            *ppv = (IWbemObjectSink*)this;
+            AddRef();
+            return WBEM_S_NO_ERROR;
+        } else {
+            return E_NOINTERFACE;
+        }
+    }
+
+    virtual HRESULT STDMETHODCALLTYPE Indicate(LONG lObjectCount, IWbemClassObject** apObjArray) {
+        for (LONG i = 0; i < lObjectCount; i++) {
+            VARIANT vtClass;
+            HRESULT hr = apObjArray[i]->Get(L"__CLASS", 0, &vtClass, NULL, NULL);
+            if (FAILED(hr) || vtClass.vt != VT_BSTR) continue;
+
+            std::wstring className = vtClass.bstrVal;
+            VariantClear(&vtClass);
+
+            VARIANT vtProp;
+            hr = apObjArray[i]->Get(L"TargetInstance", 0, &vtProp, NULL, NULL);
+            if (FAILED(hr) || vtProp.vt != VT_UNKNOWN) continue;
+
+            IUnknown* pUnk = vtProp.punkVal;
+            IWbemClassObject* pObj = NULL;
+            pUnk->QueryInterface(IID_IWbemClassObject, (void**)&pObj);
+
+            VARIANT vtName, vtPid;
+            pObj->Get(L"Name", 0, &vtName, NULL, NULL);
+            pObj->Get(L"ProcessId", 0, &vtPid, NULL, NULL);
+
+            std::wstring name = vtName.bstrVal;
+            DWORD pid = vtPid.uintVal;
+
+            if (className == L"__InstanceCreationEvent") {
+                std::string utf8name;
+                int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
+                utf8name.resize(len);
+                WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, utf8name.data(), len, nullptr, nullptr);
+
+                {
+                    std::lock_guard<std::mutex> lock(mtx);
+                    addProcess(pid, name, NULL, false);
+                }
+
+                std::cout << "[NEW PROCESS] PID: " << pid << " | Name: " << utf8name << "\n";
+            } else if (className == L"__InstanceDeletionEvent") {
+                std::lock_guard<std::mutex> lock(mtx);
+                int idx = find_process_index(pid);
+                if (idx != -1) {
+                    std::cout << "[TERMINATED PROCESS] PID: " << pid << " | Name: " << process_list[idx].name << "\n";
+                    process_list.erase(process_list.begin() + idx);
+                }
+            }
+
+            VariantClear(&vtName);
+            VariantClear(&vtPid);
+            pObj->Release();
+            VariantClear(&vtProp);
+        }
+        return WBEM_S_NO_ERROR;
+    }
+
+
+    virtual HRESULT STDMETHODCALLTYPE SetStatus(LONG lFlags, HRESULT hResult, BSTR strParam, IWbemClassObject* pObjParam) {
+        return WBEM_S_NO_ERROR;
+    }
+};
+
+
+void MonitorProcessCreation() {
+    HRESULT hr;
+    IWbemLocator* pLoc = NULL;
+    IWbemServices* pSvc = NULL;
+    IUnsecuredApartment* pUnsecApp = NULL;
+    IWbemObjectSink* pSink = NULL;
+
+    // Khởi tạo COM
+    hr = CoInitializeEx(0, COINIT_MULTITHREADED);
+    if (FAILED(hr)) {
+        std::cerr << "Failed to initialize COM library.\n";
+        return;
+    }
+
+    hr = CoInitializeSecurity(
+        NULL,
+        -1,
+        NULL,
+        NULL,
+        RPC_C_AUTHN_LEVEL_DEFAULT,
+        RPC_C_IMP_LEVEL_IMPERSONATE,
+        NULL,
+        EOAC_NONE,
+        NULL
+    );
+    if (FAILED(hr)) {
+        std::cerr << "Failed to initialize security.\n";
+        CoUninitialize();
+        return;
+    }
+
+    // Kết nối tới WMI
+    hr = CoCreateInstance(
+        CLSID_WbemLocator,
+        0,
+        CLSCTX_INPROC_SERVER,
+        IID_IWbemLocator,
+        (LPVOID*)&pLoc
+    );
+    if (FAILED(hr)) {
+        std::cerr << "Failed to create IWbemLocator object.\n";
+        CoUninitialize();
+        return;
+    }
+
+    BSTR namespaceStr = SysAllocString(L"ROOT\\CIMV2");
+    hr = pLoc->ConnectServer(
+        namespaceStr,
+        NULL,
+        NULL,
+        0,
+        0,
+        0,
+        0,
+        &pSvc
+    );
+    SysFreeString(namespaceStr);
+    if (FAILED(hr)) {
+        std::cerr << "Could not connect to WMI namespace.\n";
+        pLoc->Release();
+        CoUninitialize();
+        return;
+    }
+
+    // Đăng ký sự kiện
+    hr = CoCreateInstance(
+        CLSID_UnsecuredApartment,
+        NULL,
+        CLSCTX_LOCAL_SERVER,
+        IID_IUnsecuredApartment,
+        (void**)&pUnsecApp
+    );
+    if (FAILED(hr)) {
+        std::cerr << "Failed to create UnsecuredApartment.\n";
+        pSvc->Release();
+        pLoc->Release();
+        CoUninitialize();
+        return;
+    }
+
+    // Tạo sink object để nhận thông báo
+    pSink = new EventSink;
+    pSink->AddRef();
+
+    IUnknown* pStubUnk = NULL;
+    pUnsecApp->CreateObjectStub(pSink, &pStubUnk);
+
+    IWbemObjectSink* pStubSink = NULL;
+    pStubUnk->QueryInterface(IID_IWbemObjectSink, (void**)&pStubSink);
+
+    // Thực hiện truy vấn sự kiện
+    BSTR queryLanguage = SysAllocString(L"WQL");
+    BSTR creationQuery = SysAllocString(L"SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process'");
+    BSTR deletionQuery = SysAllocString(L"SELECT * FROM __InstanceDeletionEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process'");
+
+    hr = pSvc->ExecNotificationQueryAsync(
+        queryLanguage,
+        creationQuery,
+        WBEM_FLAG_SEND_STATUS,
+        NULL,
+        pStubSink
+    );
+    SysFreeString(creationQuery);
+
+    hr = pSvc->ExecNotificationQueryAsync(
+        queryLanguage,
+        deletionQuery,
+        WBEM_FLAG_SEND_STATUS,
+        NULL,
+        pStubSink
+    );
+    SysFreeString(deletionQuery);
+    SysFreeString(queryLanguage);
+
+    if (FAILED(hr)) {
+        std::cerr << "Failed to execute WMI query.\n";
+        pStubSink->Release();
+        pStubUnk->Release();
+        pUnsecApp->Release();
+        pSvc->Release();
+        pLoc->Release();
+        CoUninitialize();
+        return;
+    }
+
+    std::cout << "Monitoring process creation and deletion... Press Ctrl+C to stop.\n";
+
+    // Chờ sự kiện
+    while (monitor_running) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    // Dọn dẹp
+    pSvc->CancelAsyncCall(pStubSink);
+    pStubSink->Release();
+    pStubUnk->Release();
+    pUnsecApp->Release();
+    pSvc->Release();
+    pLoc->Release();
+    CoUninitialize();
 }

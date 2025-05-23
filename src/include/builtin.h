@@ -25,3 +25,5 @@ void builtin_stop(const std::vector<std::string>& args);
 void builtin_resume(const std::vector<std::string>& args);
 void builtin_mlist(const std::vector<std::string>& args);
 
+void builtin_monitor(const std::vector<std::string>& args);
+void builtin_stopmonitor(const std::vector<std::string>& args);
