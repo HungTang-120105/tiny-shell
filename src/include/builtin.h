@@ -13,6 +13,14 @@ void builtin_date(const std::vector<std::string>& args);
 void builtin_dir(const std::vector<std::string>& args);
 void builtin_path(const std::vector<std::string>& args);
 void builtin_addpath(const std::vector<std::string>& args);
+void builtin_mkdir(const std::vector<std::string>& args);
+void builtin_rmdir(const std::vector<std::string>& args);
+void builtin_touch(const std::vector<std::string>& args);
+void builtin_rm(const std::vector<std::string>& args);
+void builtin_cat(const std::vector<std::string>& args);
+void builtin_rem(const std::vector<std::string>& args);
+
+
 
 // Utility to check and dispatch built-in commands
 bool is_builtin(const std::string& cmd);

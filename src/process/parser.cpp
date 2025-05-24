@@ -23,8 +23,6 @@ Command parseCommand(const std::string &line) {
             cmd.background = true;
         } else if (t == ">" && i + 1 < tokens.size()) {
             cmd.outfile = tokens[++i];
-            std::cout << "[DEBUG] Parsed output file: " << cmd.outfile << "\n"; // Debug
-            std::cout << cmd.argv.size() << "\n"; // Debug
         } else if (t == "<" && i + 1 < tokens.size()) {
             cmd.infile = tokens[++i];
         } else {

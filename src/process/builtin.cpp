@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <thread>
+#include <fstream>
 
 
 
@@ -16,7 +17,8 @@ bool is_builtin(const std::string& cmd) {
            cmd == "help" || cmd == "list" || cmd == "kill" || cmd == "stop" ||
            cmd == "resume" || cmd == "date" || cmd == "dir" ||
            cmd == "path" || cmd == "addpath" || cmd == "mlist" || cmd == "pinfo" || 
-           cmd == "monitor" || cmd == "stopmonitor" || cmd == "monitor_silent";
+           cmd == "monitor" || cmd == "stopmonitor" || cmd == "monitor_silent"
+           || cmd == "mkdir" || cmd == "rmdir" || cmd == "touch" || cmd == "rm" || cmd == "cat" || cmd == "REM";
 }
 
 void run_builtin(const std::vector<std::string>& args) {
@@ -40,6 +42,13 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "monitor") builtin_monitor(args);
     else if (cmd == "stopmonitor") builtin_stopmonitor(args);
     else if (cmd == "monitor_silent") builtin_monitor_silent(args);
+    else if (cmd == "mkdir") builtin_mkdir(args); // Thêm hàm mkdir
+    else if (cmd == "rmdir") builtin_rmdir(args); // Thêm hàm rmdir
+    else if (cmd == "touch") builtin_touch(args); // Thêm hàm touch
+    else if (cmd == "rm") builtin_rm(args);       // Thêm hàm rm
+    else if (cmd == "cat") builtin_cat(args);     // Thêm hàm cat
+    else if (cmd == "REM") builtin_rem(args);
+    else std::cerr << "Unknown command: " << cmd << "\n";
 
 }
 
@@ -112,6 +121,11 @@ void builtin_help(const std::vector<std::string>& args) {
     std::cout << "cd <dir>          : Change the current directory to <dir>.\n";
     std::cout << "pwd               : Print the current working directory.\n";
     std::cout << "dir               : List the contents of the current directory.\n";
+    std::cout << "mkdir <dir>       : Create a new directory.\n";
+    std::cout << "rmdir <dir>       : Remove an empty directory.\n";
+    std::cout << "touch <file>      : Create or update a file.\n";
+    std::cout << "rm <file>         : Remove a file.\n";
+    std::cout << "cat <file>        : Display the contents of a file.\n";
     std::cout << "path              : Display the current PATH environment variable.\n";
     std::cout << "addpath <dir>     : Add <dir> to the PATH environment variable.\n\n";
 
@@ -188,6 +202,90 @@ void builtin_addpath(const std::vector<std::string>& args) {
     _putenv_s("PATH", p.c_str());
 }
 
+void builtin_mkdir(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cerr << "mkdir: missing directory name\n";
+        return;
+    }
+
+    const std::string& dirName = args[1];
+    if (_mkdir(dirName.c_str()) == 0) {
+        std::cout << "Directory created: " << dirName << "\n";
+    } else {
+        perror("mkdir");
+    }
+}
+
+void builtin_rmdir(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cerr << "rmdir: missing directory name\n";
+        return;
+    }
+
+    const std::string& dirName = args[1];
+    if (_rmdir(dirName.c_str()) == 0) {
+        std::cout << "Directory removed: " << dirName << "\n";
+    } else {
+        perror("rmdir");
+    }
+}
+
+void builtin_touch(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cerr << "touch: missing file name\n";
+        return;
+    }
+
+    const std::string& fileName = args[1];
+    std::ofstream file(fileName);
+    if (file.is_open()) {
+        std::cout << "File created or updated: " << fileName << "\n";
+        file.close();
+    } else {
+        std::cerr << "touch: unable to create file " << fileName << "\n";
+    }
+}
+
+void builtin_rm(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cerr << "rm: missing file name\n";
+        return;
+    }
+
+    const std::string& fileName = args[1];
+    std::wstring wideFileName(fileName.begin(), fileName.end()); // Chuyển đổi sang std::wstring
+
+    if (DeleteFileW(wideFileName.c_str())) {
+        std::cout << "File removed: " << fileName << "\n";
+    } else {
+        DWORD error = GetLastError();
+        std::cerr << "rm: failed to remove file " << fileName << " (Error code: " << error << ")\n";
+    }
+}
+
+void builtin_cat(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cerr << "cat: missing file name\n";
+        return;
+    }
+
+    const std::string& fileName = args[1];
+    std::ifstream file(fileName);
+    if (!file.is_open()) {
+        std::cerr << "cat: unable to open file " << fileName << "\n";
+        return;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        std::cout << line << "\n";
+    }
+    file.close();
+}
+
+void builtin_rem(const std::vector<std::string>& args) {
+    // Không làm gì cả, chỉ bỏ qua lệnh
+}
 
 //process_manager.h
 void builtin_mlist(const std::vector<std::string>& args) {

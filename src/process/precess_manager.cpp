@@ -11,6 +11,8 @@
 #include <thread>  // Thêm thư viện này
 #include <chrono>
 #include <psapi.h>
+#include <iomanip> // Thêm thư viện này để sử dụng std::setw
+
 
 #pragma comment(lib, "wbemuuid.lib")
 #pragma comment(lib, "psapi.lib")
@@ -172,10 +174,17 @@ void addProcess(DWORD pid, const std::wstring &cmdline, HANDLE hProcess, bool is
 }
 
 void print_managed_processes() {
-    std::cout << "PID\tStatus\t\tType\t\tName\n";
+    std::cout << std::left; // Căn trái cho các cột
+    std::cout << std::setw(10) << "PID"
+              << std::setw(15) << "Status"
+              << std::setw(15) << "Type"
+              << "Name\n";
+    std::cout << std::string(50, '-') << "\n"; // Dòng kẻ ngang
+
     for (const auto& p : process_list) {
-        std::cout << p.pid << "\t" << p.status << "\t"
-                  << (p.is_background ? "Background" : "Foreground") << "\t"
+        std::cout << std::setw(10) << p.pid
+                  << std::setw(15) << p.status
+                  << std::setw(15) << (p.is_background ? "Background" : "Foreground")
                   << p.name << "\n";
     }
 }
