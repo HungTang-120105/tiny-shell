@@ -17,6 +17,7 @@
 
 
 bool monitor_running = true;
+bool monitor_silent = false; // Mặc định là chế độ hiển thị bình thường
 static std::vector<ProcessInfo> process_list;
 
 // Hàm kiểm tra process có đang chạy không
@@ -224,58 +225,51 @@ public:
     }
 
     virtual HRESULT STDMETHODCALLTYPE Indicate(LONG lObjectCount, IWbemClassObject** apObjArray) {
-    for (LONG i = 0; i < lObjectCount; i++) {
-        VARIANT vtClass;
-        HRESULT hr = apObjArray[i]->Get(L"__CLASS", 0, &vtClass, NULL, NULL);
-        if (FAILED(hr) || vtClass.vt != VT_BSTR) continue;
+        for (LONG i = 0; i < lObjectCount; i++) {
+            VARIANT vtClass;
+            HRESULT hr = apObjArray[i]->Get(L"__CLASS", 0, &vtClass, NULL, NULL);
+            if (FAILED(hr) || vtClass.vt != VT_BSTR) continue;
 
-        std::wstring className = vtClass.bstrVal;
-        VariantClear(&vtClass);
+            std::wstring className = vtClass.bstrVal;
+            VariantClear(&vtClass);
 
-        VARIANT vtProp;
-        hr = apObjArray[i]->Get(L"TargetInstance", 0, &vtProp, NULL, NULL);
-        if (FAILED(hr) || vtProp.vt != VT_UNKNOWN) continue;
+            VARIANT vtProp;
+            hr = apObjArray[i]->Get(L"TargetInstance", 0, &vtProp, NULL, NULL);
+            if (FAILED(hr) || vtProp.vt != VT_UNKNOWN) continue;
 
-        IUnknown* pUnk = vtProp.punkVal;
-        IWbemClassObject* pObj = NULL;
-        pUnk->QueryInterface(IID_IWbemClassObject, (void**)&pObj);
+            IUnknown* pUnk = vtProp.punkVal;
+            IWbemClassObject* pObj = NULL;
+            pUnk->QueryInterface(IID_IWbemClassObject, (void**)&pObj);
 
-        VARIANT vtName, vtPid;
-        pObj->Get(L"Name", 0, &vtName, NULL, NULL);
-        pObj->Get(L"ProcessId", 0, &vtPid, NULL, NULL);
+            VARIANT vtName, vtPid;
+            pObj->Get(L"Name", 0, &vtName, NULL, NULL);
+            pObj->Get(L"ProcessId", 0, &vtPid, NULL, NULL);
 
-        std::wstring name = vtName.bstrVal;
-        DWORD pid = vtPid.uintVal;
+            std::wstring name = vtName.bstrVal;
+            DWORD pid = vtPid.uintVal;
 
-        if (className == L"__InstanceCreationEvent") {
-            // Chỉ in thông tin tiến trình, không thêm vào process_list
-            std::string utf8name;
-            int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
-            utf8name.resize(len);
-            WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, utf8name.data(), len, nullptr, nullptr);
+            if (className == L"__InstanceCreationEvent") {
+                if (!monitor_silent) { // Chỉ in ra khi không ở chế độ silent
+                    std::string utf8name;
+                    int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
+                    utf8name.resize(len);
+                    WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, utf8name.data(), len, nullptr, nullptr);
 
-            std::cout << "[NEW PROCESS] PID: " << pid << " | Name: " << utf8name << "\n";
-        } else if (className == L"__InstanceDeletionEvent") {
-            // Xóa tiến trình khỏi hệ thống nếu nó tồn tại
-            HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
-            if (hProcess) {
-                if (TerminateProcess(hProcess, 0)) {
-                    std::cout << "[TERMINATED PROCESS] PID: " << pid << " has been terminated from the system.\n";
-                } else {
-                    std::cerr << "Failed to terminate process (or the process was terminated automatically) with PID: " << pid << ".\n";
+                    std::cout << "[NEW PROCESS] PID: " << pid << " | Name: " << utf8name << "\n";
                 }
-                CloseHandle(hProcess);
+            } else if (className == L"__InstanceDeletionEvent") {
+                if (!monitor_silent) { // Chỉ in ra khi không ở chế độ silent
+                    std::cout << "[TERMINATED PROCESS] PID: " << pid << "\n";
+                }
             }
+
+            VariantClear(&vtName);
+            VariantClear(&vtPid);
+            pObj->Release();
+            VariantClear(&vtProp);
         }
-
-        VariantClear(&vtName);
-        VariantClear(&vtPid);
-        pObj->Release();
-        VariantClear(&vtProp);
+        return WBEM_S_NO_ERROR;
     }
-    return WBEM_S_NO_ERROR;
-}
-
 
     virtual HRESULT STDMETHODCALLTYPE SetStatus(LONG lFlags, HRESULT hResult, BSTR strParam, IWbemClassObject* pObjParam) {
         return WBEM_S_NO_ERROR;

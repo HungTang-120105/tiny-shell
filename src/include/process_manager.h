@@ -4,6 +4,7 @@
 #include <windows.h>
 
 extern bool monitor_running;
+extern bool monitor_silent; // Biến kiểm soát chế độ hiển thị
 // Struct để lưu thông tin process
 struct ProcessInfo {
     DWORD pid;

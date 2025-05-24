@@ -15,7 +15,7 @@ bool is_builtin(const std::string& cmd) {
            cmd == "help" || cmd == "list" || cmd == "kill" || cmd == "stop" ||
            cmd == "resume" || cmd == "date" || cmd == "dir" ||
            cmd == "path" || cmd == "addpath" || cmd == "mlist" || cmd == "pinfo" || 
-           cmd == "monitor" || cmd == "stopmonitor";
+           cmd == "monitor" || cmd == "stopmonitor" || cmd == "monitor_silent";
 }
 
 void run_builtin(const std::vector<std::string>& args) {
@@ -38,6 +38,7 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "pinfo") builtin_pinfo(args);
     else if (cmd == "monitor") builtin_monitor(args);
     else if (cmd == "stopmonitor") builtin_stopmonitor(args);
+    else if (cmd == "monitor_silent") builtin_monitor_silent(args);
 
 }
 
@@ -174,7 +175,12 @@ void builtin_pinfo(const std::vector<std::string>& args) {
 
 
 void builtin_monitor(const std::vector<std::string>& args) {
+    if (monitor_running) {
+        std::cerr << "[WARNING] Monitor is already running.\n";
+        return;
+    }
     monitor_running = true; // Đặt lại biến cờ
+    monitor_silent = false; // Chế độ hiển thị bình thường
     std::cout << "[INFO] Starting process creation monitor...\n";
     std::thread monitorThread(MonitorProcessCreation);
     monitorThread.detach(); // Chạy trong luồng riêng, không chặn shell
@@ -182,5 +188,18 @@ void builtin_monitor(const std::vector<std::string>& args) {
 
 void builtin_stopmonitor(const std::vector<std::string>& args) {
     monitor_running = false;
+    monitor_silent = false; // Đặt lại chế độ silent
     std::cout << "Stopping process monitor...\n";
+}
+
+void builtin_monitor_silent(const std::vector<std::string>& args) {
+    if (monitor_running) {
+        std::cerr << "[WARNING] Monitor is already running.\n";
+        return;
+    }
+    monitor_running = true; // Đặt lại biến cờ
+    monitor_silent = true;  // Kích hoạt chế độ silent
+    std::cout << "[INFO] Starting process creation monitor in silent mode...\n";
+    std::thread monitorThread(MonitorProcessCreation);
+    monitorThread.detach(); // Chạy trong luồng riêng, không chặn shell
 }
