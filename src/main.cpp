@@ -63,6 +63,7 @@ int main() {
 
         Command cmd = parseCommand(line);
         if (!cmd.argv.empty() && cmd.argv[0] == "exit") break;
+        // std::cout << cmd.argv.empty();
 
         // Execute command
         // Set current process handle before launching, so handler knows
