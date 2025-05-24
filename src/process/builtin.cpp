@@ -105,10 +105,39 @@ void builtin_echo(const std::vector<std::string>& args) {
 }
 
 void builtin_help(const std::vector<std::string>& args) {
-    std::cout << "Built-in commands:\n"
-              << "cd <dir>\nexit\npwd\necho\nhelp\n"
-              << "list\nkill <pid>\nstop <pid>\nresume <pid>\n"
-              << "date\ndir\npath\naddpath <dir>\n";
+    std::cout << "Tiny-Shell Help:\n\n";
+
+    std::cout << "=== File and Directory Commands ===\n";
+    std::cout << "cd <dir>          : Change the current directory to <dir>.\n";
+    std::cout << "pwd               : Print the current working directory.\n";
+    std::cout << "dir               : List the contents of the current directory.\n";
+    std::cout << "path              : Display the current PATH environment variable.\n";
+    std::cout << "addpath <dir>     : Add <dir> to the PATH environment variable.\n\n";
+
+    std::cout << "=== Process Management Commands ===\n";
+    std::cout << "list              : List all processes currently running on the system.\n";
+    std::cout << "mlist             : List all processes managed by this shell.\n";
+    std::cout << "pinfo <pid>       : Display detailed information about the process with PID <pid>.\n";
+    std::cout << "kill <pid>        : Terminate the process with PID <pid>.\n";
+    std::cout << "stop <pid>        : Suspend the process with PID <pid>.\n";
+    std::cout << "resume <pid>      : Resume the process with PID <pid>.\n\n";
+
+    std::cout << "=== Monitoring Commands ===\n";
+    std::cout << "monitor           : Start monitoring process creation and deletion (normal mode).\n";
+    std::cout << "monitor_silent    : Start monitoring process creation and deletion (silent mode).\n";
+    std::cout << "stopmonitor       : Stop the process monitoring.\n\n";
+
+    std::cout << "=== Shell Utility Commands ===\n";
+    std::cout << "echo <text>       : Print <text> to the console.\n";
+    std::cout << "date              : Display the current date and time.\n";
+    std::cout << "exit              : Exit the shell.\n";
+    std::cout << "help              : Display this help message.\n\n";
+
+    std::cout << "=== Notes ===\n";
+    std::cout << "- Commands like 'kill', 'stop', and 'resume' require the PID of the target process.\n";
+    std::cout << "- Use 'list' to view all system processes and 'mlist' to view processes managed by this shell.\n";
+    std::cout << "- The 'monitor_silent' command suppresses output while monitoring processes.\n";
+    std::cout << "- Use 'addpath' to temporarily modify the PATH variable for this shell session.\n";
 }
 
 void builtin_list(const std::vector<std::string>& args) {

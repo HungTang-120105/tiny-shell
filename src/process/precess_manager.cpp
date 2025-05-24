@@ -259,7 +259,12 @@ public:
                 }
             } else if (className == L"__InstanceDeletionEvent") {
                 if (!monitor_silent) { // Chỉ in ra khi không ở chế độ silent
-                    std::cout << "[TERMINATED PROCESS] PID: " << pid << "\n";
+                    std::string utf8name;
+                    int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
+                    utf8name.resize(len);
+                    WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, utf8name.data(), len, nullptr, nullptr);
+
+                    std::cout << "[TERMINATED PROCESS] PID: " << pid << " | Name: " << utf8name << "\n";
                 }
             }
 
