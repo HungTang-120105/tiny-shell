@@ -12,7 +12,6 @@ cmake_install.cmake
 # Các file nhị phân, object files
 *.o
 *.obj
-*.exe
 *.dll
 *.so
 *.dylib
