@@ -19,6 +19,8 @@ void builtin_touch(const std::vector<std::string>& args);
 void builtin_rm(const std::vector<std::string>& args);
 void builtin_cat(const std::vector<std::string>& args);
 void builtin_rem(const std::vector<std::string>& args);
+void builtin_cls(const std::vector<std::string>& args);
+
 
 
 

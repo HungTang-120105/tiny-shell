@@ -15,7 +15,7 @@
 bool is_builtin(const std::string& cmd) {
     return cmd == "cd" || cmd == "exit" || cmd == "pwd" || cmd == "echo" ||
            cmd == "help" || cmd == "list" || cmd == "kill" || cmd == "stop" ||
-           cmd == "resume" || cmd == "date" || cmd == "dir" ||
+           cmd == "resume" || cmd == "date" || cmd == "dir" || cmd == "cls" ||
            cmd == "path" || cmd == "addpath" || cmd == "mlist" || cmd == "pinfo" || 
            cmd == "monitor" || cmd == "stopmonitor" || cmd == "monitor_silent"
            || cmd == "mkdir" || cmd == "rmdir" || cmd == "touch" || cmd == "rm" || cmd == "cat" || cmd == "REM";
@@ -48,6 +48,7 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "rm") builtin_rm(args);       // Thêm hàm rm
     else if (cmd == "cat") builtin_cat(args);     // Thêm hàm cat
     else if (cmd == "REM") builtin_rem(args);
+    else if (cmd == "cls") builtin_cls(args); // Thêm cls
     else std::cerr << "Unknown command: " << cmd << "\n";
 
 }
@@ -143,6 +144,7 @@ void builtin_help(const std::vector<std::string>& args) {
     std::cout << "stopmonitor       : Stop the process monitoring.\n\n";
 
     std::cout << "=== Shell Utility Commands ===\n";
+    std::cout << "cls               : Clear the console screen.\n"; // Thêm mô tả cho lệnh cls
     std::cout << "echo <text>       : Print <text> to the console.\n";
     std::cout << "date              : Display the current date and time.\n";
     std::cout << "exit              : Exit the shell.\n";
@@ -281,6 +283,31 @@ void builtin_cat(const std::vector<std::string>& args) {
         std::cout << line << "\n";
     }
     file.close();
+}
+
+void builtin_cls(const std::vector<std::string>& args) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hConsole == INVALID_HANDLE_VALUE) {
+        std::cerr << "cls: Unable to get console handle\n";
+        return;
+    }
+
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (!GetConsoleScreenBufferInfo(hConsole, &csbi)) {
+        std::cerr << "cls: Unable to get console buffer info\n";
+        return;
+    }
+
+    DWORD consoleSize = csbi.dwSize.X * csbi.dwSize.Y;
+    COORD topLeft = {0, 0};
+    DWORD charsWritten;
+
+    // Fill the console with spaces
+    FillConsoleOutputCharacter(hConsole, ' ', consoleSize, topLeft, &charsWritten);
+    FillConsoleOutputAttribute(hConsole, csbi.wAttributes, consoleSize, topLeft, &charsWritten);
+
+    // Move the cursor to the top-left corner
+    SetConsoleCursorPosition(hConsole, topLeft);
 }
 
 void builtin_rem(const std::vector<std::string>& args) {
