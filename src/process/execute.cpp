@@ -91,38 +91,6 @@ void executeCommand(const Command &cmd) {
     }
 
     // --- Handle empty commands (inline script) ---
-    // --- Output redirection ---
-    if (!cmd.outfile.empty()) {
-        std::wstring winOut;
-        int len = MultiByteToWideChar(CP_UTF8, 0, cmd.outfile.c_str(), -1, nullptr, 0);
-        winOut.resize(len);
-        MultiByteToWideChar(CP_UTF8, 0, cmd.outfile.c_str(), -1, &winOut[0], len);
-
-        hOut = CreateFileW(
-            winOut.c_str(),
-            GENERIC_WRITE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
-            &sa,
-            CREATE_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL
-        );
-
-        if (hOut == INVALID_HANDLE_VALUE) {
-            std::wcerr << L"Error opening output file: " << winOut << L"\n";
-            if (hIn != INVALID_HANDLE_VALUE) CloseHandle(hIn);
-            return;
-        }
-
-        SetHandleInformation(hOut, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
-        si.hStdOutput = hOut;
-        si.hStdError  = hOut;
-    } else {
-        si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-        si.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
-    }
-
-    // --- Handle empty commands (inline script) ---
     if (cmd.argv.empty()) {
         FILE* originalOut = nullptr;
         FILE* redirectedOut = nullptr;

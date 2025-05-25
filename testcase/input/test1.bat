@@ -8,8 +8,6 @@ REM This is a comment and should not be executed.
 
 REM Hiển thị thêm nội dung
 
-countdownUI.exe
-
-countdownUI.exe ^& 
+countdownUI.exe & 
 
 echo Echo testing completed.
