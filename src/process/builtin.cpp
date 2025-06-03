@@ -109,8 +109,19 @@ void builtin_pwd(const std::vector<std::string>& args) {
 }
 
 void builtin_echo(const std::vector<std::string>& args) {
+    // Bắt đầu từ i=1 để bỏ qua "echo"
     for (size_t i = 1; i < args.size(); ++i) {
-        std::cout << args[i] << (i + 1 < args.size() ? " " : "");
+
+        // Nếu muốn bỏ dấu "": 
+        std::string out = args[i];
+        if (!out.empty() && out.front() == '"' && out.back() == '"') {
+            out = out.substr(1, out.size() - 2);
+        }
+
+        std::cout << out;
+        if (i + 1 < args.size()) {
+            std::cout << " ";
+        }
     }
     std::cout << std::endl;
 }

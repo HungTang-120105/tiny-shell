@@ -48,7 +48,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     // Thêm mutable để có thể thay đổi hFont trong lambda
     std::thread countdownThread([hwnd, hStatic, hFont]() mutable {
-        for (int i = 10; i >= 0; --i) {
+        for (int i = 20; i >= 0; --i) {
             std::wstring text = std::to_wstring(i);
             SetWindowTextW(hStatic, text.c_str());
 

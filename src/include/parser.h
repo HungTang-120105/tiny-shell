@@ -8,6 +8,7 @@ struct Command {
     bool background = false;        // True if ends with '&'
     std::string infile;             // Input redirection file
     std::string outfile;            // Output redirection file
+    bool appendMode = false;
 };
 
 // Parse the input line into a single Command (no pipe support)

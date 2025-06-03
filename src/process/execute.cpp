@@ -66,20 +66,28 @@ void executeCommand(const Command &cmd) {
         winOut.resize(len);
         MultiByteToWideChar(CP_UTF8, 0, cmd.outfile.c_str(), -1, &winOut[0], len);
 
+        // Nếu appendMode == true thì mở ở chế độ append, ngược lại ghi đè
+        DWORD dwCreationMode = cmd.appendMode ? OPEN_ALWAYS : CREATE_ALWAYS;
+        DWORD dwDesiredAccess = cmd.appendMode ? FILE_APPEND_DATA : GENERIC_WRITE;
+
         hOut = CreateFileW(
             winOut.c_str(),
-            GENERIC_WRITE,
+            dwDesiredAccess,
             FILE_SHARE_READ | FILE_SHARE_WRITE,
             &sa,
-            CREATE_ALWAYS,
+            dwCreationMode,
             FILE_ATTRIBUTE_NORMAL,
             NULL
         );
 
         if (hOut == INVALID_HANDLE_VALUE) {
             std::wcerr << L"Error opening output file: " << winOut << L"\n";
-            if (hIn != INVALID_HANDLE_VALUE) CloseHandle(hIn);
             return;
+        }
+
+        // Nếu là append, di chuyển con trỏ về cuối file
+        if (cmd.appendMode) {
+            SetFilePointer(hOut, 0, NULL, FILE_END);
         }
 
         SetHandleInformation(hOut, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
