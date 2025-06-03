@@ -1,6 +1,11 @@
 #include <iostream>
 #include <string>
 #include <windows.h> 
+#include <vector> // Added for std::vector in animateFirework
+#include <thread>
+#include <chrono> // Required for std::this_thread::sleep_for
+#include <cstdlib> // Required for rand() and srand()
+#include <ctime>   // Required for time() to seed srand()
 
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
@@ -8,9 +13,8 @@
 
 #include "include/parser.h"
 #include "include/execute.h"
-#include <thread> 
-#include <chrono>
 #include "include/process_manager.h"
+#include "include/animations.h" // Include for animateFirework definition
 
 void print_colored(const std::string& text, WORD color) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -128,7 +132,88 @@ void printExitMessage() {
     typewriter_effect("========================================\n", FOREGROUND_RED | FOREGROUND_INTENSITY);
 }
 
+void clearScreen() {
+#ifdef _WIN32
+    system("cls");
+#else
+    // ANSI escape code for clearing screen
+    std::cout << "\033[2J\033[H";
+#endif
+}
+
+void print_colored(const std::string& text, int color_code) {
+    std::cout << "\033[" << color_code << "m" << text << "\033[0m";
+}
+
+void animateFirework() {
+    clearScreen();
+    const int height = 10;
+    const int width = 30;
+    std::vector<std::string> colors = {"31", "32", "33", "34", "35", "36"}; // Red to Cyan
+
+    // Launch
+    for (int i = 0; i < height / 2; ++i) {
+        clearScreen();
+        for (int j = 0; j < i; ++j) std::cout << std::endl;
+        std::cout << std::string(width / 2, ' ') << "^" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(80));
+    }
+
+    std::string explosion_chars[] = {"*", "+", ".", "o", "O", "#", "@"};
+    int num_explosion_chars = sizeof(explosion_chars) / sizeof(explosion_chars[0]);
+
+    for (int k = 0; k < 20; ++k) {
+        clearScreen();
+
+        int center = width / 2;
+        int posY = height / 2;
+        for (int i = 0; i < posY; ++i) std::cout << "\n";
+
+        auto randColorChar = [&]() {
+            return "\033[" + colors[rand() % colors.size()] + "m" + explosion_chars[rand() % num_explosion_chars] + "\033[0m";
+        };
+
+        if (k >= 0) {
+            std::cout << std::string(center, ' ') << randColorChar() << std::endl;
+        }
+
+        if (k >= 3) {
+            std::cout << std::string(center - 2, ' ') << randColorChar() << " " << randColorChar() << " " << randColorChar() << std::endl;
+        }
+
+        if (k >= 6) {
+            std::cout << std::string(center - 4, ' ') << randColorChar() << "   " << randColorChar() << "   " << randColorChar() << std::endl;
+            std::cout << std::string(center - 5, ' ') << randColorChar() << " " << randColorChar() << "   " << randColorChar() << " " << randColorChar() << std::endl;
+        }
+
+        if (k >= 9) {
+            std::cout << std::string(center - 6, ' ') << randColorChar() << " " << randColorChar() << "     " << randColorChar() << " " << randColorChar() << std::endl;
+            std::cout << std::string(center - 3, ' ') << randColorChar() << "       " << randColorChar() << std::endl;
+        }
+
+        if (k >= 14) {
+            std::cout << std::string(center - 1, ' ') << randColorChar() << std::endl;
+            std::cout << std::string(center - 2, ' ') << " " << randColorChar() << std::endl;
+        }
+
+        if (k >= 17) {
+            clearScreen();
+            for (int i = 0; i < posY + 1; ++i) std::cout << "\n";
+            std::cout << std::string(center - 1, ' ') << "\033[" << colors[rand() % colors.size()] << "m.\033[0m" << std::endl;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200 + k * 40));
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(800));
+    clearScreen();
+}
+
+
 int main() {
+    // Seed random number generator
+    srand(time(NULL));
+
     // Bật chế độ xử lý ANSI escape sequences
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD dwMode = 0;

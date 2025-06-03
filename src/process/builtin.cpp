@@ -1,6 +1,7 @@
 #include "../include/builtin.h"
 #include "../include/process_manager.h"
 #include "../include/execute.h"
+#include "../include/animations.h"
 #include <iostream>
 #include <cstdlib>
 #include <direct.h>
@@ -43,13 +44,18 @@ void blink(const std::string& title, int blink_times = 6, int delay_ms = 300) {
     std::cout << std::endl;
 }
 
+void builtin_fireworks(const std::vector<std::string>& args) {
+    animateFirework(); 
+}
+
 bool is_builtin(const std::string& cmd) {
     return cmd == "cd" || cmd == "exit" || cmd == "pwd" || cmd == "echo" ||
            cmd == "help" || cmd == "list" || cmd == "kill" || cmd == "stop" ||
            cmd == "resume" || cmd == "date" || cmd == "dir" || cmd == "cls" ||
            cmd == "path" || cmd == "addpath" || cmd == "mlist" || cmd == "pinfo" || 
            cmd == "monitor" || cmd == "stopmonitor" || cmd == "monitor_silent"
-           || cmd == "mkdir" || cmd == "rmdir" || cmd == "touch" || cmd == "rm" || cmd == "cat" || cmd == "REM";
+           || cmd == "mkdir" || cmd == "rmdir" || cmd == "touch" || cmd == "rm" || cmd == "cat" || cmd == "REM"
+           || cmd == "fireworks";
 }
 
 void run_builtin(const std::vector<std::string>& args) {
@@ -80,6 +86,7 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "cat") builtin_cat(args);     
     else if (cmd == "REM") builtin_rem(args);
     else if (cmd == "cls") builtin_cls(args); 
+    else if (cmd == "fireworks") builtin_fireworks(args);
     else std::cerr << "Unknown command: " << cmd << "\n";
 
 }
@@ -186,7 +193,9 @@ void builtin_help(const std::vector<std::string>& args) {
     std::cout << "echo <text>       : Print <text> to the console.\n";
     std::cout << "date              : Display the current date and time.\n";
     std::cout << "exit              : Exit the shell.\n";
-    std::cout << "help              : Display this help message.\n\n";
+    std::cout << "help              : Display this help message.\n";
+    std::cout << "fireworks         : Display an ASCII fireworks animation.\n";
+    std::cout << "\n";
 
     std::cout << "=== Notes ===\n";
     std::cout << "- Commands like 'kill', 'stop', and 'resume' require the PID of the target process.\n";
@@ -392,3 +401,4 @@ void builtin_monitor_silent(const std::vector<std::string>& args) {
     std::thread monitorThread(MonitorProcessCreation);
     monitorThread.detach(); 
 }
+
