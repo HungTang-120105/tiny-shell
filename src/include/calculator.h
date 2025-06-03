@@ -42,4 +42,4 @@ double evaluate_postfix(const std::vector<Token>& postfix_tokens);
 // Main function to calculate an infix expression string.
 double calculate_expression(const std::string& expression);
 
-} // namespace TinyCalculator 
+} // namespace TinyCalculator
