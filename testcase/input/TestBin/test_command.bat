@@ -1,1 +1,0 @@
-@echo TestBin command executed!
