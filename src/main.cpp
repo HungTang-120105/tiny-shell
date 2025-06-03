@@ -7,22 +7,28 @@
 #include <thread> 
 #include "include/process_manager.h"
 
-static HANDLE g_currentProcess = NULL;
+HANDLE g_currentProcess = NULL;
 static DWORD g_originalConsoleMode = 0;
 
 BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
     if ((dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_BREAK_EVENT) && g_currentProcess) {
+        // Ngắt tiến trình foreground
         TerminateProcess(g_currentProcess, 1);
         std::cout << "\n[Shell] Foreground process terminated by Ctrl-C\n";
         g_currentProcess = NULL;
-        // flush input buffer and restore console mode
+
+        // Khôi phục trạng thái console
         HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
         FlushConsoleInputBuffer(hStdin);
         SetConsoleMode(hStdin, g_originalConsoleMode);
+
+        // Hiển thị lại prompt
         std::cout << "myShell> ";
-        return TRUE;
+        return TRUE; // Xử lý tín hiệu thành công, không thoát shell
     }
-    return FALSE;
+
+    // Nếu không phải tín hiệu liên quan đến Ctrl+C hoặc không có tiến trình foreground
+    return FALSE; // Trả về FALSE để shell không bị thoát
 }
 
 void printPrompt() {

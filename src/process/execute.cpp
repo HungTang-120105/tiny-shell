@@ -9,6 +9,7 @@
 #include <fcntl.h>     
 #include <stdio.h>     
 
+extern HANDLE g_currentProcess; // Truy cập biến toàn cục từ main.cpp
 
 // Convert UTF-8 std::string args to a Windows Unicode command line
 static std::wstring joinArgs(const std::vector<std::string>& args) {
@@ -188,8 +189,15 @@ void executeCommand(const Command &cmd) {
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
     } else {
+        // Lưu handle của tiến trình foreground
+        g_currentProcess = pi.hProcess;
+
         addProcess(pi.dwProcessId, cmdline, pi.hProcess, false);
         WaitForSingleObject(pi.hProcess, INFINITE);
+
+        // Xóa trạng thái foreground sau khi tiến trình kết thúc
+        g_currentProcess = NULL;
+
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
     }
