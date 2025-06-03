@@ -10,7 +10,38 @@
 #include <thread>
 #include <fstream>
 
+void colored(const std::string& text, WORD color) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, color);
+    std::cout << text;
+    SetConsoleTextAttribute(hConsole, 7); // Reset to default
+}
 
+void blink(const std::string& title, int blink_times = 6, int delay_ms = 300) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    COORD pos;
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    pos.X = 12; // vị trí căn giữa tương đối cho dòng tiêu đề
+    pos.Y = csbi.dwCursorPosition.Y;
+
+    for (int i = 0; i < blink_times; ++i) {
+        // Di chuyển con trỏ đến vị trí cần in
+        SetConsoleCursorPosition(hConsole, pos);
+        if (i % 2 == 0) {
+            colored(title, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY); // Vàng
+        } else {
+            colored("                            ", 0); // In khoảng trắng để "ẩn" chữ
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+    }
+
+    // In lại tiêu đề lần cuối
+    SetConsoleCursorPosition(hConsole, pos);
+    colored(title, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+    std::cout << std::endl;
+}
 
 bool is_builtin(const std::string& cmd) {
     return cmd == "cd" || cmd == "exit" || cmd == "pwd" || cmd == "echo" ||
@@ -121,7 +152,9 @@ void builtin_echo(const std::vector<std::string>& args) {
 }
 
 void builtin_help(const std::vector<std::string>& args) {
-    std::cout << "Tiny-Shell Help:\n\n";
+    std::cout << "\n";
+    blink("TINY-SHELL INSTRUCTIONS:");
+    std::cout << "\n";
 
     std::cout << "=== File and Directory Commands ===\n";
     std::cout << "cd <dir>          : Change the current directory to <dir>.\n";
