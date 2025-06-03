@@ -19,7 +19,7 @@
 
 
 bool monitor_running = true;
-bool monitor_silent = false; 
+bool monitor_silent = true; 
 static std::vector<ProcessInfo> process_list;
 
 bool is_process_running(DWORD pid) {
