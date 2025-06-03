@@ -169,8 +169,10 @@ void executeCommand(const Command &cmd) {
 
     //Launch external process 
     std::wstring cmdline = joinArgs(cmd.argv);
-    BOOL ok = CreateProcessW(nullptr, cmdline.data(), nullptr, nullptr,
-                              TRUE, 0, nullptr, nullptr, &si, &pi);
+    LPWSTR cmdline_ptr = const_cast<LPWSTR>(cmdline.c_str());
+    BOOL ok = CreateProcessW(nullptr, cmdline_ptr, nullptr, nullptr,
+                         TRUE, 0, nullptr, nullptr, &si, &pi);
+
 
     if (hIn  != INVALID_HANDLE_VALUE) CloseHandle(hIn);
     if (hOut != INVALID_HANDLE_VALUE) CloseHandle(hOut);

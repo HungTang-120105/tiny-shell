@@ -257,7 +257,7 @@ public:
                     std::string utf8name;
                     int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
                     utf8name.resize(len);
-                    WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, utf8name.data(), len, nullptr, nullptr);
+                    WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, &utf8name[0], len, nullptr, nullptr);
 
                     std::cout << "[NEW PROCESS] PID: " << pid << " | Name: " << utf8name << "\n";
                 }
@@ -266,7 +266,7 @@ public:
                     std::string utf8name;
                     int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
                     utf8name.resize(len);
-                    WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, utf8name.data(), len, nullptr, nullptr);
+                    WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, &utf8name[0], len, nullptr, nullptr);
 
                     std::cout << "[TERMINATED PROCESS] PID: " << pid << " | Name: " << utf8name << "\n";
                 }
