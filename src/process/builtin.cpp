@@ -5,6 +5,7 @@
 #include "../include/snake_game.h"
 #include "../include/system_utils.h"
 #include "../include/history.h"
+#include "../include/calculator.h"
 #include <iostream>
 #include <cstdlib>
 #include <direct.h>
@@ -15,6 +16,7 @@
 #include <fstream>
 #include <iomanip> // For formatting output (setw, fixed, setprecision)
 #include <sstream> // For string streams (diskinfo)
+#include <numeric> // For std::accumulate if joining args
 #define WIN64_LEAN_AND_MEAN
 #define _WIN64_WINNT 0x0A00
 // For WMI (cpuinfo)
@@ -80,6 +82,44 @@ void builtin_clear_history(const std::vector<std::string>& args) {
     // Message is printed by clear_all_command_history() in main.cpp
 }
 
+void builtin_calculate(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cerr << "Usage: calculate <expression>" << std::endl;
+        std::cerr << "Example: calculate \"3 + 4 * (2 - 1)\"" << std::endl;
+        return;
+    }
+
+    // Concatenate all parts of the expression after "calculate"
+    std::string expression_str;
+    for (size_t i = 1; i < args.size(); ++i) {
+        if (i > 1) expression_str += " "; // Add space between arguments if they were split by shell parser
+        expression_str += args[i];
+    }
+    // A common way to input expressions with spaces is to quote them:
+    // calculate "5 * (10 + 2)"
+    // If the shell parser already gives the full quoted string as one arg (args[1]),
+    // then the loop is not strictly necessary but harmless. 
+    // If args are already "calculate", "5", "*", "(10", "+", "2)", this joins them.
+    // Let's assume for now args[1] might be the whole expression if quoted,
+    // or it might be split if not quoted. The safest is to join them all.
+    // However, the parser likely handles quotes and gives "5 * (10+2)" as args[1].
+    // Let's simplify and assume the expression is args[1], if quoted, or needs careful input.
+    // For robustness, joining all subsequent args is better.
+
+    if (expression_str.empty()) {
+         std::cerr << "Expression cannot be empty." << std::endl;
+         return;
+    }
+
+    try {
+        double result = TinyCalculator::calculate_expression(expression_str);
+        std::cout << std::fixed << std::setprecision(6); // Adjust precision as needed
+        std::cout << expression_str << " = " << result << std::endl;
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+}
+
 bool is_builtin(const std::string& cmd) {
     return cmd == "cd" || cmd == "exit" || cmd == "pwd" || cmd == "echo" ||
            cmd == "help" || cmd == "list" || cmd == "kill" || cmd == "stop" ||
@@ -89,7 +129,8 @@ bool is_builtin(const std::string& cmd) {
            cmd == "mkdir" || cmd == "rmdir" || cmd == "touch" || cmd == "rm" || cmd == "cat" || cmd == "REM" ||
            cmd == "fireworks" || cmd == "snake" ||
            cmd == "worktime" || cmd == "cpuinfo" || cmd == "meminfo" || cmd == "diskinfo" ||
-           cmd == "history" || cmd == "clear_history";
+           cmd == "history" || cmd == "clear_history" ||
+           cmd == "calculate";
 }
 
 void run_builtin(const std::vector<std::string>& args) {
@@ -128,6 +169,7 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "diskinfo") showDiskInfo(args);  // Added diskinfo
     else if (cmd == "history") builtin_history(args);         // Added history
     else if (cmd == "clear_history") builtin_clear_history(args); // Added clear_history
+    else if (cmd == "calculate") builtin_calculate(args); // Added calculate
     else std::cerr << "Unknown command: " << cmd << "\n";
 }
 
@@ -246,6 +288,10 @@ void builtin_help(const std::vector<std::string>& args) {
     std::cout << "=== Command History ===\n";
     std::cout << "history           : Show the command history.\n";
     std::cout << "clear_history     : Clear the command history.\n\n";
+
+    std::cout << "=== Calculator ===\n";
+    std::cout << "calculate <expr>  : Evaluate a mathematical expression (e.g., calculate \"3 + 4 * 2\").\n";
+    std::cout << "                    Supports +, -, *, /. Use quotes for expressions with spaces.\n";
 
     std::cout << "=== Notes ===\n";
     std::cout << "- Commands like 'kill', 'stop', and 'resume' require the PID of the target process.\n";

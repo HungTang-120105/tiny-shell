@@ -5,7 +5,7 @@ project(tiny_shell C CXX)
 include_directories(src/include)
 
 file(GLOB HEADERS "src/include/*.h")
-file(GLOB SOURCES "src/process/*.c" "src/process/*.cpp" "src/main.cpp" "src/snake_game.cpp")
+file(GLOB SOURCES "src/process/*.c" "src/process/*.cpp" "src/main.cpp" "src/snake_game.cpp" "src/calculator.cpp" "src/system_utils.cpp")
 
 add_definitions(-D_WIN32_WINNT=0x0600)
 add_executable(myShell ${SOURCES})
