@@ -2,6 +2,7 @@
 #include "../include/process_manager.h"
 #include "../include/execute.h"
 #include "../include/animations.h"
+#include "../include/snake_game.h"
 #include <iostream>
 #include <cstdlib>
 #include <direct.h>
@@ -48,6 +49,10 @@ void builtin_fireworks(const std::vector<std::string>& args) {
     animateFirework(); 
 }
 
+void builtin_snake(const std::vector<std::string>& args) {
+    playSnakeGame();
+}
+
 bool is_builtin(const std::string& cmd) {
     return cmd == "cd" || cmd == "exit" || cmd == "pwd" || cmd == "echo" ||
            cmd == "help" || cmd == "list" || cmd == "kill" || cmd == "stop" ||
@@ -55,7 +60,8 @@ bool is_builtin(const std::string& cmd) {
            cmd == "path" || cmd == "addpath" || cmd == "mlist" || cmd == "pinfo" || 
            cmd == "monitor" || cmd == "stopmonitor" || cmd == "monitor_silent"
            || cmd == "mkdir" || cmd == "rmdir" || cmd == "touch" || cmd == "rm" || cmd == "cat" || cmd == "REM"
-           || cmd == "fireworks";
+           || cmd == "fireworks"
+           || cmd == "snake";
 }
 
 void run_builtin(const std::vector<std::string>& args) {
@@ -87,6 +93,7 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "REM") builtin_rem(args);
     else if (cmd == "cls") builtin_cls(args); 
     else if (cmd == "fireworks") builtin_fireworks(args);
+    else if (cmd == "snake") builtin_snake(args);
     else std::cerr << "Unknown command: " << cmd << "\n";
 
 }
@@ -195,6 +202,7 @@ void builtin_help(const std::vector<std::string>& args) {
     std::cout << "exit              : Exit the shell.\n";
     std::cout << "help              : Display this help message.\n";
     std::cout << "fireworks         : Display an ASCII fireworks animation.\n";
+    std::cout << "snake             : Play the classic Snake game.\n";
     std::cout << "\n";
 
     std::cout << "=== Notes ===\n";

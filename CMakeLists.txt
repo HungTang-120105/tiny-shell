@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.15)
 
 project(tiny_shell C CXX)
 
-include_directories(include)
+include_directories(src/include)
 
 file(GLOB HEADERS "src/include/*.h")
-file(GLOB SOURCES "src/process/*.c" "src/process/*.cpp" "src/main.cpp")
+file(GLOB SOURCES "src/process/*.c" "src/process/*.cpp" "src/main.cpp" "src/snake_game.cpp")
 
 add_executable(myShell ${SOURCES})
 
