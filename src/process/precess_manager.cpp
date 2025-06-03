@@ -4,14 +4,14 @@
 #include <iostream>
 #include <vector>
 
-#include <initguid.h>  // Đảm bảo GUID được định nghĩa
+#include <initguid.h>  
 #include <wbemidl.h>
 #include <comdef.h>
 #include <mutex>
-#include <thread>  // Thêm thư viện này
+#include <thread> 
 #include <chrono>
 #include <psapi.h>
-#include <iomanip> // Thêm thư viện này để sử dụng std::setw
+#include <iomanip> 
 
 
 #pragma comment(lib, "wbemuuid.lib")
@@ -19,10 +19,9 @@
 
 
 bool monitor_running = true;
-bool monitor_silent = false; // Mặc định là chế độ hiển thị bình thường
+bool monitor_silent = false; 
 static std::vector<ProcessInfo> process_list;
 
-// Hàm kiểm tra process có đang chạy không
 bool is_process_running(DWORD pid) {
     if (pid == 0) return false;
     
@@ -41,21 +40,20 @@ bool is_process_running(DWORD pid) {
     return isRunning;
 }
 
-// Hàm đồng bộ process_list với hệ thống
+// sync_process_list() synchronizes the process list by removing any processes that are no longer running.
 void sync_process_list() {
     auto it = process_list.begin();
     while (it != process_list.end()) {
         if (!is_process_running(it->pid)) {
             std::cout << "[AUTO REMOVED] PID: " << it->pid 
                       << " | Name: " << it->name << "\n";
-            it = process_list.erase(it); // Xóa tiến trình và cập nhật iterator
+            it = process_list.erase(it); 
         } else {
-            ++it; // Tiến tới phần tử tiếp theo
+            ++it; 
         }
     }
 }
 
-// Thread đồng bộ chạy độc lập
 void sync_thread_function() {
     while (monitor_running) {
         std::this_thread::sleep_for(std::chrono::seconds(2)); // Kiểm tra mỗi 2 giây
@@ -174,12 +172,12 @@ void addProcess(DWORD pid, const std::wstring &cmdline, HANDLE hProcess, bool is
 }
 
 void print_managed_processes() {
-    std::cout << std::left; // Căn trái cho các cột
+    std::cout << std::left;
     std::cout << std::setw(10) << "PID"
               << std::setw(15) << "Status"
               << std::setw(15) << "Type"
               << "Name\n";
-    std::cout << std::string(50, '-') << "\n"; // Dòng kẻ ngang
+    std::cout << std::string(50, '-') << "\n"; 
 
     for (const auto& p : process_list) {
         std::cout << std::setw(10) << p.pid
@@ -201,9 +199,6 @@ void print_process_info(DWORD pid) {
               << "Type:       " << (p.is_background ? "Background" : "Foreground") << "\n"
               << "Name:       " << p.name << "\n";
 }
-
-
-
 
 class EventSink : public IWbemObjectSink {
     LONG m_lRef;
@@ -258,7 +253,7 @@ public:
             DWORD pid = vtPid.uintVal;
 
             if (className == L"__InstanceCreationEvent") {
-                if (!monitor_silent) { // Chỉ in ra khi không ở chế độ silent
+                if (!monitor_silent) { 
                     std::string utf8name;
                     int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
                     utf8name.resize(len);
@@ -267,7 +262,7 @@ public:
                     std::cout << "[NEW PROCESS] PID: " << pid << " | Name: " << utf8name << "\n";
                 }
             } else if (className == L"__InstanceDeletionEvent") {
-                if (!monitor_silent) { // Chỉ in ra khi không ở chế độ silent
+                if (!monitor_silent) { 
                     std::string utf8name;
                     int len = WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
                     utf8name.resize(len);
@@ -298,7 +293,6 @@ void MonitorProcessCreation() {
     IUnsecuredApartment* pUnsecApp = NULL;
     IWbemObjectSink* pSink = NULL;
 
-    // Khởi tạo COM
     hr = CoInitializeEx(0, COINIT_MULTITHREADED);
     if (FAILED(hr)) {
         std::cerr << "Failed to initialize COM library.\n";
@@ -322,7 +316,6 @@ void MonitorProcessCreation() {
         return;
     }
 
-    // Kết nối tới WMI
     hr = CoCreateInstance(
         CLSID_WbemLocator,
         0,
@@ -355,7 +348,6 @@ void MonitorProcessCreation() {
         return;
     }
 
-    // Đăng ký sự kiện
     hr = CoCreateInstance(
         CLSID_UnsecuredApartment,
         NULL,
@@ -371,7 +363,6 @@ void MonitorProcessCreation() {
         return;
     }
 
-    // Tạo sink object để nhận thông báo
     pSink = new EventSink;
     pSink->AddRef();
 
@@ -381,7 +372,6 @@ void MonitorProcessCreation() {
     IWbemObjectSink* pStubSink = NULL;
     pStubUnk->QueryInterface(IID_IWbemObjectSink, (void**)&pStubSink);
 
-    // Thực hiện truy vấn sự kiện
     BSTR queryLanguage = SysAllocString(L"WQL");
     BSTR creationQuery = SysAllocString(L"SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process'");
     BSTR deletionQuery = SysAllocString(L"SELECT * FROM __InstanceDeletionEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process'");
@@ -418,13 +408,11 @@ void MonitorProcessCreation() {
 
     std::cout << "Monitoring process creation and deletion... Press Ctrl+C to stop.\n";
 
-    // Chờ sự kiện
     std::thread sync_thread(sync_thread_function);
     while (monitor_running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    // Dọn dẹp
     pSvc->CancelAsyncCall(pStubSink);
     pStubSink->Release();
     pStubUnk->Release();

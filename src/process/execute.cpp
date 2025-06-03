@@ -1,13 +1,13 @@
 #include "../include/execute.h"
-#include "../include/builtin.h"          // hỗ trợ built-in commands
-#include "../include/process_manager.h" // hỗ trợ kill/stop/resume
+#include "../include/builtin.h"          
+#include "../include/process_manager.h" 
 #include <windows.h>
 #include <iostream>
 #include <string>
 #include <vector>
-#include <fstream> // Thêm dòng này để sử dụng std::ifstream
-#include <fcntl.h>     // for _O_APPEND, _O_BINARY, _O_RDWR
-#include <stdio.h>     // for FILE*, stdout, stderr, _fdopen
+#include <fstream> 
+#include <fcntl.h>     
+#include <stdio.h>     
 
 
 // Convert UTF-8 std::string args to a Windows Unicode command line
@@ -66,7 +66,7 @@ void executeCommand(const Command &cmd) {
         winOut.resize(len);
         MultiByteToWideChar(CP_UTF8, 0, cmd.outfile.c_str(), -1, &winOut[0], len);
 
-        // Nếu appendMode == true thì mở ở chế độ append, ngược lại ghi đè
+        // if appendMode==True, use OPEN_ALWAYS, otherwise use CREATE_ALWAYS
         DWORD dwCreationMode = cmd.appendMode ? OPEN_ALWAYS : CREATE_ALWAYS;
         DWORD dwDesiredAccess = cmd.appendMode ? FILE_APPEND_DATA : GENERIC_WRITE;
 
@@ -98,7 +98,7 @@ void executeCommand(const Command &cmd) {
         si.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
     }
 
-    // --- Handle empty commands (inline script) ---
+    // Handle empty commands (inline script)
     if (cmd.argv.empty()) {
         FILE* originalOut = nullptr;
         FILE* redirectedOut = nullptr;
@@ -128,7 +128,7 @@ void executeCommand(const Command &cmd) {
             }
         }
 
-        // --- Restore stdout ---
+        // Restore stdout 
         if (redirectedOut) {
             fflush(stdout);
             if (originalOut) *stdout = *originalOut;
@@ -141,9 +141,7 @@ void executeCommand(const Command &cmd) {
         return;
     }
 
-
-
-    // --- Built-in commands: redirect std::cout/std::cerr using C++ streams ---
+    //Built-in commands: redirect std::cout/std::cerr using C++ streams
     if (is_builtin(cmd.argv[0])) {
         std::streambuf* oldCout = nullptr;
         std::streambuf* oldCerr = nullptr;
@@ -169,7 +167,7 @@ void executeCommand(const Command &cmd) {
         return;
     }
 
-    // --- Launch external process ---
+    //Launch external process 
     std::wstring cmdline = joinArgs(cmd.argv);
     BOOL ok = CreateProcessW(nullptr, cmdline.data(), nullptr, nullptr,
                               TRUE, 0, nullptr, nullptr, &si, &pi);

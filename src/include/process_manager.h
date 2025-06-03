@@ -4,8 +4,7 @@
 #include <windows.h>
 
 extern bool monitor_running;
-extern bool monitor_silent; // Biến kiểm soát chế độ hiển thị
-// Struct để lưu thông tin process
+extern bool monitor_silent; 
 struct ProcessInfo {
     DWORD pid;
     std::string name;
@@ -13,25 +12,18 @@ struct ProcessInfo {
     bool is_background; 
 };
 
-// Liệt kê danh sách tiến trình
 void list_processes();
 
-// Dừng một tiến trình theo PID
 bool stop_process(DWORD pid);
 
-// Tiếp tục một tiến trình theo PID
 bool resume_process(DWORD pid);
 
-// Kết thúc một tiến trình theo PID
 bool kill_process(DWORD pid);
 
-// Thêm một tiến trình vào danh sách
 void addProcess(DWORD pid, const std::wstring &cmdline, HANDLE hProcess, bool is_background);
 
-// in ra danh sách các tiến trình đang quản lý (Myshell)
 void print_managed_processes();
 
-// in ra thông tin của một tiến trình theo PID
 void print_process_info(DWORD pid);
 
 void MonitorProcessCreation();

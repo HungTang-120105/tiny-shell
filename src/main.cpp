@@ -1,13 +1,12 @@
 #include <iostream>
 #include <string>
-#include <windows.h>  // for console control and buffer
+#include <windows.h>  
 
 #include "include/parser.h"
 #include "include/execute.h"
-#include <thread> // để dùng std::thread
+#include <thread> 
 #include "include/process_manager.h"
 
-// Forward declare control handler
 static HANDLE g_currentProcess = NULL;
 static DWORD g_originalConsoleMode = 0;
 

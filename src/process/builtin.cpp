@@ -42,20 +42,19 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "monitor") builtin_monitor(args);
     else if (cmd == "stopmonitor") builtin_stopmonitor(args);
     else if (cmd == "monitor_silent") builtin_monitor_silent(args);
-    else if (cmd == "mkdir") builtin_mkdir(args); // Thêm hàm mkdir
-    else if (cmd == "rmdir") builtin_rmdir(args); // Thêm hàm rmdir
-    else if (cmd == "touch") builtin_touch(args); // Thêm hàm touch
-    else if (cmd == "rm") builtin_rm(args);       // Thêm hàm rm
-    else if (cmd == "cat") builtin_cat(args);     // Thêm hàm cat
+    else if (cmd == "mkdir") builtin_mkdir(args); 
+    else if (cmd == "rmdir") builtin_rmdir(args); 
+    else if (cmd == "touch") builtin_touch(args); 
+    else if (cmd == "rm") builtin_rm(args);      
+    else if (cmd == "cat") builtin_cat(args);     
     else if (cmd == "REM") builtin_rem(args);
-    else if (cmd == "cls") builtin_cls(args); // Thêm cls
+    else if (cmd == "cls") builtin_cls(args); 
     else std::cerr << "Unknown command: " << cmd << "\n";
 
 }
 
 void builtin_cd(const std::vector<std::string>& args) {
     if (args.size() == 1) {
-        // Hiển thị thư mục hiện tại
         char cwd[MAX_PATH];
         if (_getcwd(cwd, sizeof(cwd))) {
             std::cout << cwd << "\n";
@@ -67,24 +66,19 @@ void builtin_cd(const std::vector<std::string>& args) {
 
     std::string target = args[1];
 
-    // Xử lý đặc biệt: cd 
     if (target == "\\") {
         char drive[MAX_PATH];
         if (_getcwd(drive, sizeof(drive))) {
-            drive[2] = '\0'; // Cắt thành "C:"
+            drive[2] = '\0'; 
             target = std::string(drive) + "\\";
         }
     }
 
-    // Xử lý đặc biệt: cd D: (không chuyển thư mục nếu không phải foreground shell)
     if (target.size() == 2 && std::isalpha(target[0]) && target[1] == ':') {
-        // Với shell tự viết, không nên can thiệp chuyển ổ đĩa toàn hệ thống
-        // Ta có thể in ra cảnh báo:
         std::cout << "Note: Changing drives like 'cd D:' has no effect in this shell.\n";
         return;
     }
 
-    // Dùng _chdir để chuyển thư mục
     if (_chdir(target.c_str()) != 0) {
         perror("cd");
     } else {
@@ -155,7 +149,7 @@ void builtin_help(const std::vector<std::string>& args) {
     std::cout << "stopmonitor       : Stop the process monitoring.\n\n";
 
     std::cout << "=== Shell Utility Commands ===\n";
-    std::cout << "cls               : Clear the console screen.\n"; // Thêm mô tả cho lệnh cls
+    std::cout << "cls               : Clear the console screen.\n"; 
     std::cout << "echo <text>       : Print <text> to the console.\n";
     std::cout << "date              : Display the current date and time.\n";
     std::cout << "exit              : Exit the shell.\n";
@@ -266,7 +260,7 @@ void builtin_rm(const std::vector<std::string>& args) {
     }
 
     const std::string& fileName = args[1];
-    std::wstring wideFileName(fileName.begin(), fileName.end()); // Chuyển đổi sang std::wstring
+    std::wstring wideFileName(fileName.begin(), fileName.end()); 
 
     if (DeleteFileW(wideFileName.c_str())) {
         std::cout << "File removed: " << fileName << "\n";
@@ -313,19 +307,15 @@ void builtin_cls(const std::vector<std::string>& args) {
     COORD topLeft = {0, 0};
     DWORD charsWritten;
 
-    // Fill the console with spaces
     FillConsoleOutputCharacter(hConsole, ' ', consoleSize, topLeft, &charsWritten);
     FillConsoleOutputAttribute(hConsole, csbi.wAttributes, consoleSize, topLeft, &charsWritten);
 
-    // Move the cursor to the top-left corner
     SetConsoleCursorPosition(hConsole, topLeft);
 }
 
 void builtin_rem(const std::vector<std::string>& args) {
-    // Không làm gì cả, chỉ bỏ qua lệnh
 }
 
-//process_manager.h
 void builtin_mlist(const std::vector<std::string>& args) {
     print_managed_processes();
 }
@@ -345,16 +335,16 @@ void builtin_monitor(const std::vector<std::string>& args) {
         std::cerr << "[WARNING] Monitor is already running.\n";
         return;
     }
-    monitor_running = true; // Đặt lại biến cờ
-    monitor_silent = false; // Chế độ hiển thị bình thường
+    monitor_running = true; 
+    monitor_silent = false; 
     std::cout << "[INFO] Starting process creation monitor...\n";
     std::thread monitorThread(MonitorProcessCreation);
-    monitorThread.detach(); // Chạy trong luồng riêng, không chặn shell
+    monitorThread.detach(); 
 }
 
 void builtin_stopmonitor(const std::vector<std::string>& args) {
     monitor_running = false;
-    monitor_silent = false; // Đặt lại chế độ silent
+    monitor_silent = false; 
     std::cout << "Stopping process monitor...\n";
 }
 
@@ -363,9 +353,9 @@ void builtin_monitor_silent(const std::vector<std::string>& args) {
         std::cerr << "[WARNING] Monitor is already running.\n";
         return;
     }
-    monitor_running = true; // Đặt lại biến cờ
-    monitor_silent = true;  // Kích hoạt chế độ silent
+    monitor_running = true; 
+    monitor_silent = true;  
     std::cout << "[INFO] Starting process creation monitor in silent mode...\n";
     std::thread monitorThread(MonitorProcessCreation);
-    monitorThread.detach(); // Chạy trong luồng riêng, không chặn shell
+    monitorThread.detach(); 
 }
