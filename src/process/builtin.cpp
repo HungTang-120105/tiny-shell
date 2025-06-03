@@ -4,6 +4,7 @@
 #include "../include/animations.h"
 #include "../include/snake_game.h"
 #include "../include/system_utils.h"
+#include "../include/history.h"
 #include <iostream>
 #include <cstdlib>
 #include <direct.h>
@@ -63,16 +64,32 @@ void builtin_snake(const std::vector<std::string>& args) {
     playSnakeGame();
 }
 
+void builtin_history(const std::vector<std::string>& args) {
+    const auto& history = get_command_history();
+    if (history.empty()) {
+        std::cout << "No commands in history." << std::endl;
+    } else {
+        for (size_t i = 0; i < history.size(); ++i) {
+            std::cout << std::setw(4) << i + 1 << "  " << history[i] << std::endl;
+        }
+    }
+}
+
+void builtin_clear_history(const std::vector<std::string>& args) {
+    clear_all_command_history();
+    // Message is printed by clear_all_command_history() in main.cpp
+}
+
 bool is_builtin(const std::string& cmd) {
     return cmd == "cd" || cmd == "exit" || cmd == "pwd" || cmd == "echo" ||
            cmd == "help" || cmd == "list" || cmd == "kill" || cmd == "stop" ||
            cmd == "resume" || cmd == "date" || cmd == "dir" || cmd == "cls" ||
            cmd == "path" || cmd == "addpath" || cmd == "mlist" || cmd == "pinfo" || 
-           cmd == "monitor" || cmd == "stopmonitor" || cmd == "monitor_silent"
-           || cmd == "mkdir" || cmd == "rmdir" || cmd == "touch" || cmd == "rm" || cmd == "cat" || cmd == "REM"
-           || cmd == "fireworks"
-           || cmd == "snake"
-           || cmd == "worktime" || cmd == "cpuinfo" || cmd == "meminfo" || cmd == "diskinfo"; // Added new commands
+           cmd == "monitor" || cmd == "stopmonitor" || cmd == "monitor_silent" ||
+           cmd == "mkdir" || cmd == "rmdir" || cmd == "touch" || cmd == "rm" || cmd == "cat" || cmd == "REM" ||
+           cmd == "fireworks" || cmd == "snake" ||
+           cmd == "worktime" || cmd == "cpuinfo" || cmd == "meminfo" || cmd == "diskinfo" ||
+           cmd == "history" || cmd == "clear_history";
 }
 
 void run_builtin(const std::vector<std::string>& args) {
@@ -109,6 +126,8 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "cpuinfo") showCPUInfo(args);    // Added cpuinfo
     else if (cmd == "meminfo") showMemoryInfo(args);    // Added meminfo
     else if (cmd == "diskinfo") showDiskInfo(args);  // Added diskinfo
+    else if (cmd == "history") builtin_history(args);         // Added history
+    else if (cmd == "clear_history") builtin_clear_history(args); // Added clear_history
     else std::cerr << "Unknown command: " << cmd << "\n";
 }
 
@@ -216,13 +235,17 @@ void builtin_help(const std::vector<std::string>& args) {
     std::cout << "exit              : Exit the shell.\n";
     std::cout << "help              : Display this help message.\n";
     std::cout << "fireworks         : Display an ASCII fireworks animation.\n";
-    std::cout << "snake             : Play the classic Snake game.\n\n"; // Add newline after last utility
+    std::cout << "snake             : Play the classic Snake game.\n\n";
 
-    std::cout << "=== System Information Commands ===\n"; // New section
+    std::cout << "=== System Information Commands ===\n";
     std::cout << "worktime          : Display system uptime.\n";
     std::cout << "cpuinfo           : Display CPU information.\n";
     std::cout << "meminfo           : Display memory usage information.\n";
     std::cout << "diskinfo          : Display disk usage information for all drives.\n\n";
+
+    std::cout << "=== Command History ===\n";
+    std::cout << "history           : Show the command history.\n";
+    std::cout << "clear_history     : Clear the command history.\n\n";
 
     std::cout << "=== Notes ===\n";
     std::cout << "- Commands like 'kill', 'stop', and 'resume' require the PID of the target process.\n";
@@ -428,4 +451,6 @@ void builtin_monitor_silent(const std::vector<std::string>& args) {
     std::thread monitorThread(MonitorProcessCreation);
     monitorThread.detach(); 
 }
+
+
 

@@ -15,6 +15,27 @@
 #include "include/execute.h"
 #include "include/process_manager.h"
 #include "include/animations.h" // Include for animateFirework definition
+#include "include/history.h" // Added for command history
+
+// --- Command History Storage ---
+static std::vector<std::string> command_history;
+
+// --- Command History Management Functions ---
+void add_to_command_history(const std::string& command) {
+    if (!command.empty()) { // Avoid adding empty strings to history
+        command_history.push_back(command);
+    }
+}
+
+const std::vector<std::string>& get_command_history() {
+    return command_history;
+}
+
+void clear_all_command_history() {
+    command_history.clear();
+    std::cout << "Command history cleared." << std::endl;
+}
+// --- End Command History ---
 
 void print_colored(const std::string& text, WORD color) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -252,6 +273,8 @@ int main() {
             continue;
         }
 
+        add_to_command_history(line); // Add command to history here
+
         if (line.empty()) continue;
 
         Command cmd = parseCommand(line);
@@ -279,6 +302,13 @@ int main() {
         // After execution, flush and restore console
         FlushConsoleInputBuffer(hStdin);
         SetConsoleMode(hStdin, g_originalConsoleMode);
+    }
+
+    if (monitor_running) {
+        monitor_running = false;
+    }
+    if (monitorThread.joinable()) {
+        monitorThread.join();
     }
 
     return 0;
