@@ -3,6 +3,7 @@
 #include "../include/execute.h"
 #include "../include/animations.h"
 #include "../include/snake_game.h"
+#include "../include/system_utils.h"
 #include <iostream>
 #include <cstdlib>
 #include <direct.h>
@@ -11,6 +12,15 @@
 #include <string>
 #include <thread>
 #include <fstream>
+#include <iomanip> // For formatting output (setw, fixed, setprecision)
+#include <sstream> // For string streams (diskinfo)
+#define WIN64_LEAN_AND_MEAN
+#define _WIN64_WINNT 0x0A00
+// For WMI (cpuinfo)
+#include <comdef.h> 
+#include <Wbemidl.h>
+
+#pragma comment(lib, "wbemuuid.lib")
 
 void colored(const std::string& text, WORD color) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -61,7 +71,8 @@ bool is_builtin(const std::string& cmd) {
            cmd == "monitor" || cmd == "stopmonitor" || cmd == "monitor_silent"
            || cmd == "mkdir" || cmd == "rmdir" || cmd == "touch" || cmd == "rm" || cmd == "cat" || cmd == "REM"
            || cmd == "fireworks"
-           || cmd == "snake";
+           || cmd == "snake"
+           || cmd == "worktime" || cmd == "cpuinfo" || cmd == "meminfo" || cmd == "diskinfo"; // Added new commands
 }
 
 void run_builtin(const std::vector<std::string>& args) {
@@ -94,8 +105,11 @@ void run_builtin(const std::vector<std::string>& args) {
     else if (cmd == "cls") builtin_cls(args); 
     else if (cmd == "fireworks") builtin_fireworks(args);
     else if (cmd == "snake") builtin_snake(args);
+    else if (cmd == "worktime") showWorkTime(args);   // Added worktime
+    else if (cmd == "cpuinfo") showCPUInfo(args);    // Added cpuinfo
+    else if (cmd == "meminfo") showMemoryInfo(args);    // Added meminfo
+    else if (cmd == "diskinfo") showDiskInfo(args);  // Added diskinfo
     else std::cerr << "Unknown command: " << cmd << "\n";
-
 }
 
 void builtin_cd(const std::vector<std::string>& args) {
@@ -202,8 +216,13 @@ void builtin_help(const std::vector<std::string>& args) {
     std::cout << "exit              : Exit the shell.\n";
     std::cout << "help              : Display this help message.\n";
     std::cout << "fireworks         : Display an ASCII fireworks animation.\n";
-    std::cout << "snake             : Play the classic Snake game.\n";
-    std::cout << "\n";
+    std::cout << "snake             : Play the classic Snake game.\n\n"; // Add newline after last utility
+
+    std::cout << "=== System Information Commands ===\n"; // New section
+    std::cout << "worktime          : Display system uptime.\n";
+    std::cout << "cpuinfo           : Display CPU information.\n";
+    std::cout << "meminfo           : Display memory usage information.\n";
+    std::cout << "diskinfo          : Display disk usage information for all drives.\n\n";
 
     std::cout << "=== Notes ===\n";
     std::cout << "- Commands like 'kill', 'stop', and 'resume' require the PID of the target process.\n";
